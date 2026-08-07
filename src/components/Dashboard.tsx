@@ -435,6 +435,7 @@ function StatusPanel({
 
 export default function Dashboard() {
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
+  const [compareMode, setCompareMode] = useState(false);
 
   const set = (k: keyof Filters) => (v: string) => setFilters((f) => ({ ...f, [k]: v }));
 

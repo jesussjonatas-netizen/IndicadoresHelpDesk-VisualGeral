@@ -588,6 +588,8 @@ export default function Dashboard() {
               <h1 className="text-base font-semibold leading-tight sm:text-lg">
                 Análise Comparativa dos Chamados de Help Desk da ANCORA
               </h1>
+              <p className="text-[11px] text-white/60">Última atualização: {ULTIMA_ATUALIZACAO}</p>
+
             </div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">

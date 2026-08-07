@@ -679,17 +679,66 @@ export default function Dashboard() {
         <main className="min-w-0 flex-1 space-y-5">
           {/* KPI cards */}
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCard label="Total de Chamados" single singleValue={fmt(kpis.total)} icon={Activity} tone="blue" />
-            <KpiCard label="Em Tratativa" single singleValue={fmt(kpis.emTratativa)} icon={Hourglass} tone="warn" />
+            <KpiCard
+              label="Total de Chamados"
+              single={!compareMode}
+              singleValue={fmt(kpis.total)}
+              value2026={fmt(currentKpis.total)}
+              value2025={fmt(prevKpis.total)}
+              delta={computeDelta(currentKpis.total, prevKpis.total)}
+              icon={Activity}
+              tone="blue"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
+            />
+            <KpiCard
+              label="Em Tratativa"
+              single={!compareMode}
+              singleValue={fmt(kpis.emTratativa)}
+              value2026={fmt(currentKpis.emTratativa)}
+              value2025={fmt(prevKpis.emTratativa)}
+              delta={computeDelta(currentKpis.emTratativa, prevKpis.emTratativa)}
+              icon={Hourglass}
+              tone="warn"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
+            />
             <KpiCard
               label="Finalizados"
-              single
+              single={!compareMode}
               singleValue={fmt(kpis.finalizados)}
+              value2026={fmt(currentKpis.finalizados)}
+              value2025={fmt(prevKpis.finalizados)}
+              delta={computeDelta(currentKpis.finalizados, prevKpis.finalizados)}
               icon={CheckCircle2}
               tone="success"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
             />
-            <KpiCard label="Procedentes" single singleValue={fmt(kpis.procedentes)} icon={BadgeCheck} tone="success" />
-            <KpiCard label="Improcedentes" single singleValue={fmt(kpis.improcedentes)} icon={XCircle} tone="red" />
+            <KpiCard
+              label="Procedentes"
+              single={!compareMode}
+              singleValue={fmt(kpis.procedentes)}
+              value2026={fmt(currentKpis.procedentes)}
+              value2025={fmt(prevKpis.procedentes)}
+              delta={computeDelta(currentKpis.procedentes, prevKpis.procedentes)}
+              icon={BadgeCheck}
+              tone="success"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
+            />
+            <KpiCard
+              label="Improcedentes"
+              single={!compareMode}
+              singleValue={fmt(kpis.improcedentes)}
+              value2026={fmt(currentKpis.improcedentes)}
+              value2025={fmt(prevKpis.improcedentes)}
+              delta={computeDelta(currentKpis.improcedentes, prevKpis.improcedentes)}
+              icon={XCircle}
+              tone="red"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
+            />
           </section>
 
           {/* Consolidated status panels (S1/2025 + S1/2026) */}

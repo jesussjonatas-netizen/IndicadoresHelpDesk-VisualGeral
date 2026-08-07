@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import chamadosData from "@/data/chamados.json";
 import {
   applyFilters,
+  computeDelta,
   computeKpis,
   DEFLATORES,
   fmtDelta,
@@ -128,6 +129,8 @@ function KpiCard({
   sublabel,
   single = false,
   singleValue,
+  currentLabel = "2026",
+  previousLabel = "2025",
 }: {
   label: string;
   value2026?: string | number;
@@ -138,6 +141,8 @@ function KpiCard({
   sublabel?: string;
   single?: boolean;
   singleValue?: string | number;
+  currentLabel?: string;
+  previousLabel?: string;
 }) {
   const isGradient = tone !== "neutral";
   return (
@@ -173,20 +178,20 @@ function KpiCard({
                 >
                   {value2026}
                 </p>
-                <span
-                  className={`text-[10px] font-semibold uppercase ${
-                    isGradient ? "text-white/70" : "text-muted-foreground"
-                  }`}
+                  <span
+                    className={`text-[10px] font-semibold uppercase ${
+                      isGradient ? "text-white/70" : "text-muted-foreground"
+                    }`}
+                  >
+                    {currentLabel}
+                  </span>
+                  {delta && <DeltaChip delta={delta} isGradient={isGradient} />}
+                </div>
+                <p
+                  className={`mt-1.5 text-[11px] tabular-nums ${isGradient ? "text-white/75" : "text-muted-foreground"}`}
                 >
-                  2026
-                </span>
-                {delta && <DeltaChip delta={delta} isGradient={isGradient} />}
-              </div>
-              <p
-                className={`mt-1.5 text-[11px] tabular-nums ${isGradient ? "text-white/75" : "text-muted-foreground"}`}
-              >
-                2025: <span className="font-semibold">{value2025}</span>
-              </p>
+                  {previousLabel}: <span className="font-semibold">{value2025}</span>
+                </p>
             </>
           )}
           {sublabel && (
@@ -435,6 +440,7 @@ function StatusPanel({
 
 export default function Dashboard() {
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
+  const [compareMode, setCompareMode] = useState(false);
 
   const set = (k: keyof Filters) => (v: string) => setFilters((f) => ({ ...f, [k]: v }));
 
@@ -457,6 +463,19 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => applyFilters(ROWS, filters), [filters]);
   const kpis = useMemo(() => computeKpis(filtered), [filtered]);
+
+  const { currentKpis, prevKpis, currentLabel, previousLabel } = useMemo(() => {
+    const currentYear = filters.ano === "all" ? "2026" : filters.ano;
+    const previousYear = currentYear === "2026" ? "2025" : "2026";
+    const currentF = applyFilters(ROWS, { ...filters, ano: currentYear });
+    const prevF = applyFilters(ROWS, { ...filters, ano: previousYear });
+    return {
+      currentKpis: computeKpis(currentF),
+      prevKpis: computeKpis(prevF),
+      currentLabel: currentYear,
+      previousLabel: previousYear,
+    };
+  }, [filters]);
 
   const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);
   const deflatoresList = useMemo(() => deflatoresPorColaborador(filtered, 20), [filtered]);
@@ -583,6 +602,14 @@ export default function Dashboard() {
             </div>
             <Button
               size="sm"
+              variant={compareMode ? "default" : "secondary"}
+              className={`h-9 gap-1.5 ${compareMode ? "bg-white text-ancora-blue hover:bg-white/90" : "bg-white/15 text-white hover:bg-white/25"}`}
+              onClick={() => setCompareMode((v) => !v)}
+            >
+              <Activity className="h-4 w-4" /> {compareMode ? "Comparando" : "Comparar"}
+            </Button>
+            <Button
+              size="sm"
               variant="secondary"
               className="h-9 gap-1.5 bg-white/15 text-white hover:bg-white/25"
               onClick={exportXlsx}
@@ -653,17 +680,66 @@ export default function Dashboard() {
         <main className="min-w-0 flex-1 space-y-5">
           {/* KPI cards */}
           <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiCard label="Total de Chamados" single singleValue={fmt(kpis.total)} icon={Activity} tone="blue" />
-            <KpiCard label="Em Tratativa" single singleValue={fmt(kpis.emTratativa)} icon={Hourglass} tone="warn" />
+            <KpiCard
+              label="Total de Chamados"
+              single={!compareMode}
+              singleValue={fmt(kpis.total)}
+              value2026={fmt(currentKpis.total)}
+              value2025={fmt(prevKpis.total)}
+              delta={computeDelta(currentKpis.total, prevKpis.total)}
+              icon={Activity}
+              tone="blue"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
+            />
+            <KpiCard
+              label="Em Tratativa"
+              single={!compareMode}
+              singleValue={fmt(kpis.emTratativa)}
+              value2026={fmt(currentKpis.emTratativa)}
+              value2025={fmt(prevKpis.emTratativa)}
+              delta={computeDelta(currentKpis.emTratativa, prevKpis.emTratativa)}
+              icon={Hourglass}
+              tone="warn"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
+            />
             <KpiCard
               label="Finalizados"
-              single
+              single={!compareMode}
               singleValue={fmt(kpis.finalizados)}
+              value2026={fmt(currentKpis.finalizados)}
+              value2025={fmt(prevKpis.finalizados)}
+              delta={computeDelta(currentKpis.finalizados, prevKpis.finalizados)}
               icon={CheckCircle2}
               tone="success"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
             />
-            <KpiCard label="Procedentes" single singleValue={fmt(kpis.procedentes)} icon={BadgeCheck} tone="success" />
-            <KpiCard label="Improcedentes" single singleValue={fmt(kpis.improcedentes)} icon={XCircle} tone="red" />
+            <KpiCard
+              label="Procedentes"
+              single={!compareMode}
+              singleValue={fmt(kpis.procedentes)}
+              value2026={fmt(currentKpis.procedentes)}
+              value2025={fmt(prevKpis.procedentes)}
+              delta={computeDelta(currentKpis.procedentes, prevKpis.procedentes)}
+              icon={BadgeCheck}
+              tone="success"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
+            />
+            <KpiCard
+              label="Improcedentes"
+              single={!compareMode}
+              singleValue={fmt(kpis.improcedentes)}
+              value2026={fmt(currentKpis.improcedentes)}
+              value2025={fmt(prevKpis.improcedentes)}
+              delta={computeDelta(currentKpis.improcedentes, prevKpis.improcedentes)}
+              icon={XCircle}
+              tone="red"
+              currentLabel={currentLabel}
+              previousLabel={previousLabel}
+            />
           </section>
 
           {/* Consolidated status panels (S1/2025 + S1/2026) */}

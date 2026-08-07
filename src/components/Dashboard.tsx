@@ -463,13 +463,18 @@ export default function Dashboard() {
   const filtered = useMemo(() => applyFilters(ROWS, filters), [filters]);
   const kpis = useMemo(() => computeKpis(filtered), [filtered]);
 
-  const prevFilters = useMemo<Filters>(() => {
-    if (filters.ano === "all") return filters;
-    const other = filters.ano === "2026" ? "2025" : "2026";
-    return { ...filters, ano: other };
+  const { currentKpis, prevKpis, currentLabel, previousLabel } = useMemo(() => {
+    const currentYear = filters.ano === "all" ? "2026" : filters.ano;
+    const previousYear = currentYear === "2026" ? "2025" : "2026";
+    const currentF = applyFilters(ROWS, { ...filters, ano: currentYear });
+    const prevF = applyFilters(ROWS, { ...filters, ano: previousYear });
+    return {
+      currentKpis: computeKpis(currentF),
+      prevKpis: computeKpis(prevF),
+      currentLabel: currentYear,
+      previousLabel,
+    };
   }, [filters]);
-  const prevFiltered = useMemo(() => applyFilters(ROWS, prevFilters), [prevFilters]);
-  const kpisPrev = useMemo(() => computeKpis(prevFiltered), [prevFiltered]);
 
   const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);
   const deflatoresList = useMemo(() => deflatoresPorColaborador(filtered, 20), [filtered]);

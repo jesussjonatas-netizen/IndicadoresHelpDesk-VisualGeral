@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import chamadosData from "@/data/chamados.json";
 import {
   applyFilters,
+  computeDelta,
   computeKpis,
   DEFLATORES,
   fmtDelta,

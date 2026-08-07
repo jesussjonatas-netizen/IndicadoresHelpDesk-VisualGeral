@@ -472,7 +472,7 @@ export default function Dashboard() {
       currentKpis: computeKpis(currentF),
       prevKpis: computeKpis(prevF),
       currentLabel: currentYear,
-      previousLabel,
+      previousLabel: previousYear,
     };
   }, [filters]);
 

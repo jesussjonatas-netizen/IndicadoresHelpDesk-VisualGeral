@@ -52,7 +52,7 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const ULTIMA_ATUALIZACAO = "07/08/2026 09:58";
+const ULTIMA_ATUALIZACAO = "07/08/2026 17:40";
 
 const ROWS: Chamado[] = (chamadosData as Chamado[]).filter(
   (r) => (r.ano === 2025 || r.ano === 2026) && r.mes >= 1 && r.mes <= 6,

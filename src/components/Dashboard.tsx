@@ -52,6 +52,8 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+const ULTIMA_ATUALIZACAO = "07/08/2026 09:58";
+
 const ROWS: Chamado[] = (chamadosData as Chamado[]).filter(
   (r) => (r.ano === 2025 || r.ano === 2026) && r.mes >= 1 && r.mes <= 6,
 );
@@ -588,6 +590,8 @@ export default function Dashboard() {
               <h1 className="text-base font-semibold leading-tight sm:text-lg">
                 Análise Comparativa dos Chamados de Help Desk da ANCORA
               </h1>
+              <p className="text-[11px] text-white/60">Última atualização: {ULTIMA_ATUALIZACAO}</p>
+
             </div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">

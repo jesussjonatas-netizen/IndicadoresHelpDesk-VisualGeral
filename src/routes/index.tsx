@@ -14,7 +14,7 @@ export const Route = createFileRoute("/")({
       {
         property: "og:description",
         content:
-          "Dashboard executivo do Help Desk da Rede Ancora com filtros dinâmicos, rankings e exportação.",
+          "Dashboard executivo de análise comparativa dos chamados do Help Desk da Rede Ancora: volumes, procedência, ações e desempenho operacional.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },

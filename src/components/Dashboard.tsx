@@ -128,6 +128,8 @@ function KpiCard({
   sublabel,
   single = false,
   singleValue,
+  currentLabel = "2026",
+  previousLabel = "2025",
 }: {
   label: string;
   value2026?: string | number;
@@ -138,6 +140,8 @@ function KpiCard({
   sublabel?: string;
   single?: boolean;
   singleValue?: string | number;
+  currentLabel?: string;
+  previousLabel?: string;
 }) {
   const isGradient = tone !== "neutral";
   return (

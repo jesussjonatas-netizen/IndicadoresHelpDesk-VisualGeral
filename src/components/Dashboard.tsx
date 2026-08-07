@@ -177,20 +177,20 @@ function KpiCard({
                 >
                   {value2026}
                 </p>
-                <span
-                  className={`text-[10px] font-semibold uppercase ${
-                    isGradient ? "text-white/70" : "text-muted-foreground"
-                  }`}
+                  <span
+                    className={`text-[10px] font-semibold uppercase ${
+                      isGradient ? "text-white/70" : "text-muted-foreground"
+                    }`}
+                  >
+                    {currentLabel}
+                  </span>
+                  {delta && <DeltaChip delta={delta} isGradient={isGradient} />}
+                </div>
+                <p
+                  className={`mt-1.5 text-[11px] tabular-nums ${isGradient ? "text-white/75" : "text-muted-foreground"}`}
                 >
-                  2026
-                </span>
-                {delta && <DeltaChip delta={delta} isGradient={isGradient} />}
-              </div>
-              <p
-                className={`mt-1.5 text-[11px] tabular-nums ${isGradient ? "text-white/75" : "text-muted-foreground"}`}
-              >
-                2025: <span className="font-semibold">{value2025}</span>
-              </p>
+                  {previousLabel}: <span className="font-semibold">{value2025}</span>
+                </p>
             </>
           )}
           {sublabel && (

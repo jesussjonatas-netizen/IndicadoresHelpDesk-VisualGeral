@@ -592,6 +592,14 @@ export default function Dashboard() {
             </div>
             <Button
               size="sm"
+              variant={compareMode ? "default" : "secondary"}
+              className={`h-9 gap-1.5 ${compareMode ? "bg-white text-ancora-blue hover:bg-white/90" : "bg-white/15 text-white hover:bg-white/25"}`}
+              onClick={() => setCompareMode((v) => !v)}
+            >
+              <Activity className="h-4 w-4" /> {compareMode ? "Comparando" : "Comparar"}
+            </Button>
+            <Button
+              size="sm"
               variant="secondary"
               className="h-9 gap-1.5 bg-white/15 text-white hover:bg-white/25"
               onClick={exportXlsx}

@@ -459,6 +459,14 @@ export default function Dashboard() {
   const filtered = useMemo(() => applyFilters(ROWS, filters), [filters]);
   const kpis = useMemo(() => computeKpis(filtered), [filtered]);
 
+  const prevFilters = useMemo<Filters>(() => {
+    if (filters.ano === "all") return filters;
+    const other = filters.ano === "2026" ? "2025" : "2026";
+    return { ...filters, ano: other };
+  }, [filters]);
+  const prevFiltered = useMemo(() => applyFilters(ROWS, prevFilters), [prevFilters]);
+  const kpisPrev = useMemo(() => computeKpis(prevFiltered), [prevFiltered]);
+
   const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);
   const deflatoresList = useMemo(() => deflatoresPorColaborador(filtered, 20), [filtered]);
   const deflatoresTotal = useMemo(() => deflatoresList.reduce((s, r) => s + r.qtd, 0), [deflatoresList]);

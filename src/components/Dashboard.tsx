@@ -422,7 +422,7 @@ function StatusPanel({
           <Icon className="h-4 w-4" />
           <h3 className="text-sm font-semibold uppercase tracking-wider">{title}</h3>
         </div>
-        <span className="text-[11px] font-medium text-white/85"> </span>
+        <span className="text-[11px] font-medium text-white/85">1º Semestre </span>
       </div>
       <div className="grid grid-cols-3 divide-x divide-border/60">
         {items.map((it) => {

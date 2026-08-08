@@ -626,9 +626,6 @@ export default function Dashboard() {
               <img src={logoAncora} alt="Rede Ancora" width={1536} height={512} className="h-7 w-auto" />
             </div>
             <div>
-              <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/70">
-                Rede Ancora · Help Desk · Visual Geral
-              </p>
 
               <h1 className="text-base font-semibold leading-tight sm:text-lg">
                 Análise Comparativa dos Chamados de Help Desk da ANCORA
@@ -687,7 +684,10 @@ export default function Dashboard() {
                 size="sm"
                 variant="ghost"
                 className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setFilters(emptyFilters)}
+                onClick={() => {
+                  setFilters(emptyFilters);
+                  setQuick(null);
+                }}
               >
                 <RotateCcw className="h-3 w-3" /> Limpar
               </Button>

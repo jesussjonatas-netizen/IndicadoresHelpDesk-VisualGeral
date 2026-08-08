@@ -244,3 +244,29 @@ export const fmtDelta = (d: Delta) => {
   return `${sign} ${Math.abs(d.pct).toFixed(1).replace(".", ",")}%`;
 };
 
+
+// --- Decodificação da base compactada (formato colunar com dicionário) ---
+type EncodedChamados = {
+  dict: Record<string, string[]>;
+  rows: (number | string | null)[][];
+};
+
+const DICT_KEYS = [
+  "cliente","regiao","cd","modalidade","parecer","tipo","status","acao","conferente","causaRaiz",
+] as const;
+
+export function decodeChamados(data: unknown): Chamado[] {
+  const enc = data as EncodedChamados;
+  const d = enc.dict;
+  return enc.rows.map((r) => {
+    const o: Record<string, unknown> = {
+      mes: r[0], ano: r[1], idPortal: r[2], numeroBenner: r[3],
+    };
+    DICT_KEYS.forEach((k, i) => {
+      o[k] = d[k][r[4 + i] as number];
+    });
+    o.dia = r[14];
+    o.data = r[15];
+    return o as Chamado;
+  });
+}

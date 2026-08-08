@@ -4,13 +4,13 @@ import Dashboard from "@/components/Dashboard";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Chamados HD ANCORA · Análise Comparativa" },
+      { title: "Chamados HD ANCORA · Análise Comparativa · Visão geral" },
       {
         name: "description",
         content:
           "Dashboard executivo de análise comparativa dos chamados do Help Desk da Rede Ancora: volumes, procedência, ações e desempenho operacional.",
       },
-      { property: "og:title", content: "Chamados HD ANCORA · Análise Comparativa" },
+      { property: "og:title", content: "Chamados HD ANCORA · Análise Comparativa · Visão geral" },
       {
         property: "og:description",
         content:

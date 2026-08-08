@@ -77,7 +77,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Chamados HD ANCORA · Análise Comparativa" },
+      { title: "Chamados HD ANCORA · Análise Comparativa · Visão geral" },
       {
         name: "description",
         content:
@@ -85,8 +85,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { property: "og:title", content: "Chamados HD ANCORA · Análise Comparativa" },
-      { name: "twitter:title", content: "Chamados HD ANCORA · Análise Comparativa" },
+      { property: "og:title", content: "Chamados HD ANCORA · Análise Comparativa · Visão geral" },
+      { name: "twitter:title", content: "Chamados HD ANCORA · Análise Comparativa · Visão geral" },
       { name: "description", content: "Dashboard executivo de análise comparativa dos chamados do Help Desk da Rede Ancora: volumes, procedência, ações e desempenho operacional." },
       { property: "og:description", content: "Dashboard executivo de análise comparativa dos chamados do Help Desk da Rede Ancora: volumes, procedência, ações e desempenho operacional." },
       { name: "twitter:description", content: "Dashboard executivo de análise comparativa dos chamados do Help Desk da Rede Ancora: volumes, procedência, ações e desempenho operacional." },

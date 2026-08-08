@@ -475,10 +475,13 @@ const ANOS = uniqueSorted(ROWS.map((r) => r.ano));
 export default function Dashboard() {
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
   const [compareMode, setCompareMode] = useState(false);
-  const [quick, setQuick] = useState<QuickKey | null>(null);
+  const [quick, setQuick] = useState<QuickKey[]>([]);
 
   const set = (k: keyof Filters) => (v: string) => setFilters((f) => ({ ...f, [k]: v }));
-  const toggleQuick = (k: QuickKey) => () => setQuick((q) => (q === k ? null : k));
+  const toggleQuick = (k: QuickKey) => () =>
+    setQuick((q) => (q.includes(k) ? q.filter((x) => x !== k) : [...q, k]));
+  const matchQuick = (rows: Chamado[], keys: QuickKey[]) =>
+    keys.length ? rows.filter((r) => keys.some((k) => QUICK_MATCH[k](r))) : rows;
 
   // Options derived from full dataset so users can always pick.
   const opts = useMemo(() => {

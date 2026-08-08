@@ -502,7 +502,7 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => {
     const base = applyFilters(ROWS, filters);
-    return quick ? base.filter(QUICK_MATCH[quick]) : base;
+    return matchQuick(base, quick);
   }, [filters, quick]);
   const kpis = useMemo(() => computeKpis(filtered), [filtered]);
 
@@ -514,7 +514,7 @@ export default function Dashboard() {
     const previousYear = String(prev);
     const pick = (ano: string) => {
       const base = applyFilters(ROWS, { ...filters, ano });
-      return quick ? base.filter(QUICK_MATCH[quick]) : base;
+      return matchQuick(base, quick);
     };
     return {
       currentKpis: computeKpis(pick(currentYear)),
@@ -689,7 +689,7 @@ export default function Dashboard() {
                 className="h-7 gap-1 px-2 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => {
                   setFilters(emptyFilters);
-                  setQuick(null);
+                  setQuick([]);
                 }}
               >
                 <RotateCcw className="h-3 w-3" /> Limpar
@@ -740,8 +740,8 @@ export default function Dashboard() {
               tone="blue"
               currentLabel={currentLabel}
               previousLabel={previousLabel}
-              onClick={() => setQuick(null)}
-              sublabel={quick ? "Clique para limpar o filtro dos cards" : undefined}
+              onClick={() => setQuick([])}
+              sublabel={quick.length ? "Clique para limpar o filtro dos cards" : undefined}
             />
             <KpiCard
               label="Em Tratativa"
@@ -755,7 +755,7 @@ export default function Dashboard() {
               currentLabel={currentLabel}
               previousLabel={previousLabel}
               onClick={toggleQuick("emTratativa")}
-              active={quick === "emTratativa"}
+              active={quick.includes("emTratativa")}
             />
             <KpiCard
               label="Finalizados"
@@ -769,7 +769,7 @@ export default function Dashboard() {
               currentLabel={currentLabel}
               previousLabel={previousLabel}
               onClick={toggleQuick("finalizados")}
-              active={quick === "finalizados"}
+              active={quick.includes("finalizados")}
             />
             <KpiCard
               label="Procedentes"
@@ -783,7 +783,7 @@ export default function Dashboard() {
               currentLabel={currentLabel}
               previousLabel={previousLabel}
               onClick={toggleQuick("procedentes")}
-              active={quick === "procedentes"}
+              active={quick.includes("procedentes")}
             />
             <KpiCard
               label="Improcedentes"
@@ -797,7 +797,7 @@ export default function Dashboard() {
               currentLabel={currentLabel}
               previousLabel={previousLabel}
               onClick={toggleQuick("improcedentes")}
-              active={quick === "improcedentes"}
+              active={quick.includes("improcedentes")}
             />
 
           </section>

@@ -443,7 +443,7 @@ function StatusPanel({
           <Icon className="h-4 w-4" />
           <h3 className="text-sm font-semibold uppercase tracking-wider">{title}</h3>
         </div>
-        <span className="text-[11px] font-medium text-white/85">1º Semestre </span>
+        
       </div>
       <div className="grid grid-cols-3 divide-x divide-border/60">
         {items.map((it) => {
@@ -461,16 +461,29 @@ function StatusPanel({
   );
 }
 
+type QuickKey = "emTratativa" | "finalizados" | "procedentes" | "improcedentes";
+
+const QUICK_MATCH: Record<QuickKey, (r: Chamado) => boolean> = {
+  emTratativa: (r) => r.parecer === "Em tratativa",
+  finalizados: (r) => r.acao === "FINALIZADO",
+  procedentes: (r) => r.parecer === "Procedente",
+  improcedentes: (r) => r.parecer === "Improcedente",
+};
+
+const ANOS = uniqueSorted(ROWS.map((r) => r.ano));
+
 export default function Dashboard() {
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
   const [compareMode, setCompareMode] = useState(false);
+  const [quick, setQuick] = useState<QuickKey | null>(null);
 
   const set = (k: keyof Filters) => (v: string) => setFilters((f) => ({ ...f, [k]: v }));
+  const toggleQuick = (k: QuickKey) => () => setQuick((q) => (q === k ? null : k));
 
   // Options derived from full dataset so users can always pick.
   const opts = useMemo(() => {
     return {
-      anos: [2025, 2026],
+      anos: ANOS,
       meses: uniqueSorted(ROWS.map((r) => r.mes)),
       dias: uniqueSorted(ROWS.map((r) => r.dia).filter((d) => d > 0)),
       clientes: uniqueSorted(ROWS.map((r) => r.cliente)),
@@ -484,21 +497,30 @@ export default function Dashboard() {
     };
   }, []);
 
-  const filtered = useMemo(() => applyFilters(ROWS, filters), [filters]);
+  const filtered = useMemo(() => {
+    const base = applyFilters(ROWS, filters);
+    return quick ? base.filter(QUICK_MATCH[quick]) : base;
+  }, [filters, quick]);
   const kpis = useMemo(() => computeKpis(filtered), [filtered]);
 
   const { currentKpis, prevKpis, currentLabel, previousLabel } = useMemo(() => {
-    const currentYear = filters.ano === "all" ? "2026" : filters.ano;
-    const previousYear = currentYear === "2026" ? "2025" : "2026";
-    const currentF = applyFilters(ROWS, { ...filters, ano: currentYear });
-    const prevF = applyFilters(ROWS, { ...filters, ano: previousYear });
+    const latest = ANOS[ANOS.length - 1];
+    const currentYear = filters.ano === "all" ? String(latest) : filters.ano;
+    const idx = ANOS.indexOf(Number(currentYear));
+    const prev = idx > 0 ? ANOS[idx - 1] : (ANOS[idx + 1] ?? ANOS[idx]);
+    const previousYear = String(prev);
+    const pick = (ano: string) => {
+      const base = applyFilters(ROWS, { ...filters, ano });
+      return quick ? base.filter(QUICK_MATCH[quick]) : base;
+    };
     return {
-      currentKpis: computeKpis(currentF),
-      prevKpis: computeKpis(prevF),
+      currentKpis: computeKpis(pick(currentYear)),
+      prevKpis: computeKpis(pick(previousYear)),
       currentLabel: currentYear,
       previousLabel: previousYear,
     };
-  }, [filters]);
+  }, [filters, quick]);
+
 
   const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);
   const deflatoresList = useMemo(() => deflatoresPorColaborador(filtered, 20), [filtered]);

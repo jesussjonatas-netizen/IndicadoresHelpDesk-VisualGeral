@@ -737,6 +737,8 @@ export default function Dashboard() {
               tone="blue"
               currentLabel={currentLabel}
               previousLabel={previousLabel}
+              onClick={() => setQuick(null)}
+              sublabel={quick ? "Clique para limpar o filtro dos cards" : undefined}
             />
             <KpiCard
               label="Em Tratativa"
@@ -749,6 +751,8 @@ export default function Dashboard() {
               tone="warn"
               currentLabel={currentLabel}
               previousLabel={previousLabel}
+              onClick={toggleQuick("emTratativa")}
+              active={quick === "emTratativa"}
             />
             <KpiCard
               label="Finalizados"
@@ -761,6 +765,8 @@ export default function Dashboard() {
               tone="success"
               currentLabel={currentLabel}
               previousLabel={previousLabel}
+              onClick={toggleQuick("finalizados")}
+              active={quick === "finalizados"}
             />
             <KpiCard
               label="Procedentes"
@@ -773,6 +779,8 @@ export default function Dashboard() {
               tone="success"
               currentLabel={currentLabel}
               previousLabel={previousLabel}
+              onClick={toggleQuick("procedentes")}
+              active={quick === "procedentes"}
             />
             <KpiCard
               label="Improcedentes"
@@ -785,7 +793,10 @@ export default function Dashboard() {
               tone="red"
               currentLabel={currentLabel}
               previousLabel={previousLabel}
+              onClick={toggleQuick("improcedentes")}
+              active={quick === "improcedentes"}
             />
+
           </section>
 
           {/* Consolidated status panels (S1/2025 + S1/2026) */}

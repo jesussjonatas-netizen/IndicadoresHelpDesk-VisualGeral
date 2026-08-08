@@ -197,9 +197,10 @@ export function computeKpis(rows: Chamado[]): Kpis {
     else if (r.acao === "LOJA") acaoLoja++;
     else if (r.acao === "TERCEIROS") acaoTerceiros++;
     else if (r.acao === "FINALIZADO") finalizados++;
+    // Em tratativa = chamado ainda não finalizado (ação diferente de FINALIZADO)
+    if (r.acao !== "FINALIZADO") emTratativa++;
     if (r.parecer === "Procedente") procedentes++;
     else if (r.parecer === "Improcedente") improcedentes++;
-    else if (r.parecer === "Em tratativa") emTratativa++;
   }
   const total = rows.length;
   const crossParticipacao = normais ? ((crossdocking + compraJunto) / normais) * 100 : 0;

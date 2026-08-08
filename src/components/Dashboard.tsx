@@ -4,6 +4,8 @@ import {
   applyFilters,
   computeDelta,
   computeKpis,
+  decodeChamados,
+
   DEFLATORES,
   fmtDelta,
   deflatoresPorColaborador,
@@ -52,11 +54,10 @@ import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const ULTIMA_ATUALIZACAO = "07/08/2026 17:40";
+const ULTIMA_ATUALIZACAO = "08/08/2026 12:15";
 
-const ROWS: Chamado[] = (chamadosData as Chamado[]).filter(
-  (r) => (r.ano === 2025 || r.ano === 2026) && r.mes >= 1 && r.mes <= 6,
-);
+const ROWS: Chamado[] = decodeChamados(chamadosData);
+
 
 function FilterSelect({
   label,

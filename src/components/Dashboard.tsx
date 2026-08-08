@@ -541,7 +541,7 @@ export default function Dashboard() {
       if (r.parecer === "Procedente") procedentes++;
       if (r.parecer === "Procedente" && r.acao === "ANCORA") procAncora++;
       if (r.parecer === "Procedente" && r.acao === "LOJA") procLoja++;
-      if (r.parecer === "Em tratativa") emTratativa++;
+      if (r.acao !== "FINALIZADO") emTratativa++;
       if (r.parecer === "Improcedente") improcedentes++;
       if (r.acao === "FINALIZADO") finalizados++;
     }

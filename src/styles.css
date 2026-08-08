@@ -97,7 +97,7 @@
     border-color: var(--color-border);
   }
 
-  body {
+  body {#BDBEA9
     background-color: var(--color-background);
     color: var(--color-foreground);
     font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

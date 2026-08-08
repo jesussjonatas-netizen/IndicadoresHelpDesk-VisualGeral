@@ -134,6 +134,8 @@ function KpiCard({
   singleValue,
   currentLabel = "2026",
   previousLabel = "2025",
+  onClick,
+  active = false,
 }: {
   label: string;
   value2026?: string | number;
@@ -146,13 +148,31 @@ function KpiCard({
   singleValue?: string | number;
   currentLabel?: string;
   previousLabel?: string;
+  onClick?: () => void;
+  active?: boolean;
 }) {
   const isGradient = tone !== "neutral";
   return (
     <Card
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       className={`relative overflow-hidden border-0 shadow-card transition hover:shadow-card-hover ${
         isGradient ? `bg-gradient-to-br ${toneClasses[tone]}` : "bg-card"
+      } ${onClick ? "cursor-pointer" : ""} ${
+        active ? "ring-2 ring-offset-2 ring-ancora-blue ring-offset-background" : ""
       }`}
+
     >
       <div className="flex items-start justify-between p-4">
         <div className="min-w-0">

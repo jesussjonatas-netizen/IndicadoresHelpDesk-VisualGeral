@@ -464,7 +464,7 @@ function StatusPanel({
 type QuickKey = "emTratativa" | "finalizados" | "procedentes" | "improcedentes";
 
 const QUICK_MATCH: Record<QuickKey, (r: Chamado) => boolean> = {
-  emTratativa: (r) => r.parecer === "Em tratativa",
+  emTratativa: (r) => r.acao !== "FINALIZADO",
   finalizados: (r) => r.acao === "FINALIZADO",
   procedentes: (r) => r.parecer === "Procedente",
   improcedentes: (r) => r.parecer === "Improcedente",

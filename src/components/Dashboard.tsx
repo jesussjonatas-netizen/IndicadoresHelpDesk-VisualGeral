@@ -180,20 +180,20 @@ function KpiCard({
                 >
                   {value2026}
                 </p>
-                  <span
-                    className={`text-[10px] font-semibold uppercase ${
-                      isGradient ? "text-white/70" : "text-muted-foreground"
-                    }`}
-                  >
-                    {currentLabel}
-                  </span>
-                  {delta && <DeltaChip delta={delta} isGradient={isGradient} />}
-                </div>
-                <p
-                  className={`mt-1.5 text-[11px] tabular-nums ${isGradient ? "text-white/75" : "text-muted-foreground"}`}
+                <span
+                  className={`text-[10px] font-semibold uppercase ${
+                    isGradient ? "text-white/70" : "text-muted-foreground"
+                  }`}
                 >
-                  {previousLabel}: <span className="font-semibold">{value2025}</span>
-                </p>
+                  {currentLabel}
+                </span>
+                {delta && <DeltaChip delta={delta} isGradient={isGradient} />}
+              </div>
+              <p
+                className={`mt-1.5 text-[11px] tabular-nums ${isGradient ? "text-white/75" : "text-muted-foreground"}`}
+              >
+                {previousLabel}: <span className="font-semibold">{value2025}</span>
+              </p>
             </>
           )}
           {sublabel && (
@@ -584,14 +584,13 @@ export default function Dashboard() {
             </div>
             <div>
               <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/70">
-                Rede Ancora · Help Desk · 1º Semestre · 2025 - 2026
+                Rede Ancora · Help Desk · Visual Geral
               </p>
 
               <h1 className="text-base font-semibold leading-tight sm:text-lg">
                 Análise Comparativa dos Chamados de Help Desk da ANCORA
               </h1>
               <p className="text-[11px] text-white/60">Última atualização: {ULTIMA_ATUALIZACAO}</p>
-
             </div>
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">

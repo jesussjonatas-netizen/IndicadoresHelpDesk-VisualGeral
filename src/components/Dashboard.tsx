@@ -58,7 +58,7 @@ import autoTable from "jspdf-autotable";
 
 const ULTIMA_ATUALIZACAO = "08/08/2026 12:15";
 
-const ROWS: Chamado[] = decodeChamados(chamadosData);
+
 
 
 function FilterSelect({

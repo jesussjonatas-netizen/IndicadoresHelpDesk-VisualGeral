@@ -6,22 +6,23 @@ import {
   applyFilters,
   computeDelta,
   computeKpis,
-
-  DEFLATORES,
-  fmtDelta,
-  deflatoresPorColaborador,
+  DEFLATORES_CHECKOUT,
+  DEFLATORES_EXPEDICAO,
+  deflatoresRank,
   emptyFilters,
   fmt,
+  fmtDelta,
   fmtPct,
   groupCount,
   MESES,
   uniqueSorted,
   type Chamado,
-  type Delta,
+  type DeflatorRank,
   type Filters,
 } from "@/lib/chamados";
 
 import logoAncora from "@/assets/rede-ancora-logo.png";
+import ImportDialog from "@/components/ImportDialog";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -32,33 +33,26 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import {
   Activity,
-  ArrowDownToLine,
-  BadgeCheck,
-  Ban,
+  AlertTriangle,
   Building2,
   CheckCircle2,
-  ClipboardList,
   FileSpreadsheet,
   FileText,
   Filter,
   Hourglass,
-  AlertTriangle,
-  PieChart,
   RotateCcw,
   Search,
-  ShieldCheck,
-  Truck,
-  Users,
-  XCircle,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-const ULTIMA_ATUALIZACAO = "08/08/2026 12:15";
+const AMBER = "#E98A15";
+const GREEN = "#0E8F5C";
+const GRAY = "#6B7280";
 
-
-
+const fmtMoney = (n: number) =>
+  n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
 function FilterSelect({
   label,
@@ -93,322 +87,261 @@ function FilterSelect({
   );
 }
 
-type KpiTone = "blue" | "red" | "neutral" | "success" | "warn";
-const toneClasses: Record<KpiTone, string> = {
-  blue: "from-ancora-blue to-ancora-blue-dark text-white",
-  red: "from-ancora-red to-ancora-red-dark text-white",
-  neutral: "bg-card text-foreground",
-  success: "from-emerald-600 to-emerald-700 text-white",
-  warn: "from-amber-500 to-amber-600 text-white",
-};
-
-function DeltaChip({ delta, isGradient }: { delta: Delta; isGradient: boolean }) {
-  const base = "ml-2 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums";
-  let cls: string;
-  if (isGradient) {
-    cls =
-      delta.direction === "up"
-        ? "bg-white/20 text-white"
-        : delta.direction === "down"
-          ? "bg-white/20 text-white"
-          : "bg-white/15 text-white/80";
-  } else {
-    cls =
-      delta.direction === "up"
-        ? "bg-emerald-100 text-emerald-700"
-        : delta.direction === "down"
-          ? "bg-red-100 text-red-700"
-          : "bg-muted text-muted-foreground";
-  }
-  return <span className={`${base} ${cls}`}>{fmtDelta(delta)}</span>;
-}
-
 function KpiCard({
   label,
-  value2026,
-  value2025,
-  delta,
+  value,
+  valor,
+  color,
   icon: Icon,
-  tone = "neutral",
-  sublabel,
-  single = false,
-  singleValue,
-  currentLabel = "2026",
-  previousLabel = "2025",
   onClick,
-  active = false,
+  active,
+  compare,
 }: {
   label: string;
-  value2026?: string | number;
-  value2025?: string | number;
-  delta?: Delta;
+  value: number;
+  valor: number;
+  color: string;
   icon: React.ComponentType<{ className?: string }>;
-  tone?: KpiTone;
-  sublabel?: string;
-  single?: boolean;
-  singleValue?: string | number;
-  currentLabel?: string;
-  previousLabel?: string;
   onClick?: () => void;
   active?: boolean;
+  compare?: { current: number; previous: number; currentLabel: string; previousLabel: string };
 }) {
-  const isGradient = tone !== "neutral";
+  const delta = compare ? computeDelta(compare.current, compare.previous) : null;
   return (
-    <Card
-      onClick={onClick}
+    <div
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
-      onKeyDown={
-        onClick
-          ? (e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                onClick();
-              }
-            }
-          : undefined
-      }
-      className={`relative overflow-hidden border-0 shadow-card transition hover:shadow-card-hover ${
-        isGradient ? `bg-gradient-to-br ${toneClasses[tone]}` : "bg-card"
-      } ${onClick ? "cursor-pointer" : ""} ${
-        active ? "ring-2 ring-offset-2 ring-ancora-blue ring-offset-background" : ""
+      onClick={onClick}
+      onKeyDown={(e) => {
+        if (onClick && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className={`rounded-xl border bg-card shadow-card transition hover:shadow-card-hover ${
+        onClick ? "cursor-pointer" : ""
       }`}
-
+      style={{
+        borderColor: active ? color : "var(--border)",
+        borderTop: `4px solid ${color}`,
+        boxShadow: active ? `0 0 0 2px ${color}33` : undefined,
+      }}
     >
-      <div className="flex items-start justify-between p-4">
+      <div className="flex items-start justify-between gap-3 px-4 pb-3 pt-3.5">
         <div className="min-w-0">
-          <p
-            className={`text-[11px] font-semibold uppercase tracking-wider ${
-              isGradient ? "text-white/80" : "text-muted-foreground"
-            }`}
-          >
-            {label}
-          </p>
-          {single ? (
-            <p
-              className={`mt-2 text-3xl font-bold leading-none tabular-nums ${
-                isGradient ? "text-white" : "text-foreground"
-              }`}
-            >
-              {singleValue}
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+          <p className="mt-2 text-[26px] font-extrabold leading-none tabular-nums text-foreground">{fmt(value)}</p>
+          {compare && (
+            <p className="mt-1.5 text-[11px] tabular-nums text-muted-foreground">
+              {compare.currentLabel}: <span className="font-semibold">{fmt(compare.current)}</span> ·{" "}
+              {compare.previousLabel}: <span className="font-semibold">{fmt(compare.previous)}</span>
+              {delta && <span className="ml-1 font-bold" style={{ color }}>{fmtDelta(delta)}</span>}
             </p>
-          ) : (
-            <>
-              <div className="mt-2 flex items-baseline gap-1">
-                <p
-                  className={`text-2xl font-bold leading-none tabular-nums ${
-                    isGradient ? "text-white" : "text-foreground"
-                  }`}
-                >
-                  {value2026}
-                </p>
-                <span
-                  className={`text-[10px] font-semibold uppercase ${
-                    isGradient ? "text-white/70" : "text-muted-foreground"
-                  }`}
-                >
-                  {currentLabel}
-                </span>
-                {delta && <DeltaChip delta={delta} isGradient={isGradient} />}
-              </div>
-              <p
-                className={`mt-1.5 text-[11px] tabular-nums ${isGradient ? "text-white/75" : "text-muted-foreground"}`}
-              >
-                {previousLabel}: <span className="font-semibold">{value2025}</span>
-              </p>
-            </>
-          )}
-          {sublabel && (
-            <p className={`mt-1 text-[10px] ${isGradient ? "text-white/60" : "text-muted-foreground"}`}>{sublabel}</p>
           )}
         </div>
-        <div className={`rounded-lg p-2 ${isGradient ? "bg-white/15" : "bg-accent text-accent-foreground"}`}>
-          <Icon className={`h-5 w-5 ${isGradient ? "text-white" : ""}`} />
+        <div className="rounded-lg p-2" style={{ backgroundColor: `${color}1F`, color }}>
+          <Icon className="h-5 w-5" />
         </div>
       </div>
-      {isGradient && (
-        <div className="pointer-events-none absolute -right-8 -bottom-8 h-24 w-24 rounded-full bg-white/10 blur-2xl" />
-      )}
-    </Card>
+      <div className="border-t border-border px-4 py-2">
+        <p className="text-[11px] tabular-nums text-muted-foreground">
+          Valor: <span className="font-semibold text-foreground">{fmtMoney(valor)}</span>
+        </p>
+      </div>
+    </div>
   );
 }
 
-function RankTable({
+function StatusPanel({
   title,
   icon: Icon,
-  rows,
-  header,
-  total,
+  color,
+  items,
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  rows: { nome: string; qtd: number }[];
-  header: string;
-  total: number;
+  color: string;
+  items: { label: string; value: number }[];
 }) {
+  const total = items.reduce((s, i) => s + i.value, 0);
   return (
-    <Card className="border-0 shadow-card">
-      <div className="flex items-center justify-between border-b border-border/60 p-4">
-        <div className="flex items-center gap-2">
-          <div className="rounded-md bg-accent p-1.5 text-accent-foreground">
-            <Icon className="h-4 w-4" />
-          </div>
-          <h3 className="text-sm font-semibold text-foreground">{title}</h3>
-        </div>
-        <Badge variant="secondary" className="font-medium">
-          Top {rows.length}
-        </Badge>
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
+      <div
+        className="flex items-center gap-2 px-4 py-2.5"
+        style={{ backgroundColor: `${color}14`, borderBottom: `3px solid ${color}`, color }}
+      >
+        <Icon className="h-4 w-4" />
+        <h3 className="text-sm font-bold uppercase tracking-wider">{title}</h3>
       </div>
-      <ScrollArea className="h-[380px]">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">{header}</TableHead>
-              <TableHead className="w-32 text-right text-xs uppercase tracking-wider text-muted-foreground">
-                Qtd. Chamados
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((r) => {
-              const pct = total ? (r.qtd / total) * 100 : 0;
-              return (
-                <TableRow key={r.nome} className="border-border/50">
-                  <TableCell className="max-w-0 truncate text-sm font-medium text-foreground">
-                    <div className="truncate" title={r.nome}>
-                      {r.nome}
-                    </div>
-                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-ancora-blue to-ancora-blue-light"
-                        style={{ width: `${Math.min(100, pct)}%` }}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right text-sm font-semibold tabular-nums text-foreground">
-                    {fmt(r.qtd)}
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-            {rows.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={2} className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhum registro para os filtros atuais
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </ScrollArea>
-    </Card>
+      <div className="grid divide-x divide-border" style={{ gridTemplateColumns: `repeat(${items.length}, 1fr)` }}>
+        {items.map((it) => {
+          const pct = total ? (it.value / total) * 100 : 0;
+          return (
+            <div key={it.label} className="p-4 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{it.label}</p>
+              <p className="mt-2 text-2xl font-extrabold tabular-nums" style={{ color }}>
+                {fmt(it.value)}
+              </p>
+              <p className="mt-1 text-[11px] tabular-nums text-muted-foreground">{fmtPct(pct)}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
-function DeflatoresRankTable({
-  rows,
-  total,
+function PanelCard({
+  title,
+  badge,
+  children,
 }: {
-  rows: {
-    nome: string;
-    regiao: string;
-    qtd: number;
-    breakdown: Record<string, number>;
-  }[];
-  total: number;
+  title: string;
+  badge?: string;
+  children: React.ReactNode;
 }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-border bg-card shadow-card">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+        {badge && (
+          <Badge variant="secondary" className="font-medium">
+            {badge}
+          </Badge>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function RankRows({ rows, total }: { rows: { nome: string; qtd: number }[]; total: number }) {
   const max = rows.reduce((m, r) => Math.max(m, r.qtd), 0);
   return (
-    <Card className="border-0 shadow-card">
-      <div className="flex items-center justify-between border-b border-border/60 p-4">
-        <div className="flex items-center gap-2">
-          <div className="rounded-md bg-accent p-1.5 text-accent-foreground">
-            <AlertTriangle className="h-4 w-4" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Ranking de Deflatores</h3>
-            <p className="text-[11px] text-muted-foreground">
-              Por Conferente da Expedição · passe o cursor para ver detalhes
-            </p>
-          </div>
-        </div>
-        <Badge variant="secondary" className="font-medium">
-          {fmt(total)} ocorrências
-        </Badge>
-      </div>
+    <ScrollArea className="h-[380px]">
+      <Table>
+        <TableHeader>
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Nome</TableHead>
+            <TableHead className="w-24 text-right text-xs uppercase tracking-wider text-muted-foreground">
+              Qtd.
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => (
+            <TableRow key={r.nome} className="border-border/60">
+              <TableCell className="max-w-0 truncate text-sm font-medium text-foreground">
+                <div className="truncate" title={r.nome}>
+                  {r.nome}
+                </div>
+                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-ancora-blue"
+                    style={{ width: `${max ? Math.min(100, (r.qtd / max) * 100) : 0}%` }}
+                  />
+                </div>
+              </TableCell>
+              <TableCell className="text-right text-sm font-semibold tabular-nums text-foreground">
+                {fmt(r.qtd)}
+                <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                  {total ? fmtPct((r.qtd / total) * 100) : ""}
+                </span>
+              </TableCell>
+            </TableRow>
+          ))}
+          {rows.length === 0 && (
+            <TableRow>
+              <TableCell colSpan={2} className="py-10 text-center text-sm text-muted-foreground">
+                Nenhum registro para os filtros atuais
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </ScrollArea>
+  );
+}
+
+function DeflatoresPanel({
+  title,
+  rows,
+  causas,
+}: {
+  title: string;
+  rows: DeflatorRank[];
+  causas: readonly string[];
+}) {
+  const total = rows.reduce((s, r) => s + r.qtd, 0);
+  const max = rows.reduce((m, r) => Math.max(m, r.qtd), 0);
+  return (
+    <PanelCard title={title} badge={`${fmt(total)} ocorrências`}>
       <ScrollArea className="h-[380px]">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Colaborador</TableHead>
-              <TableHead className="w-16 text-center text-xs uppercase tracking-wider text-muted-foreground">
+              <TableHead className="w-12 text-center text-xs uppercase tracking-wider text-muted-foreground">
                 CD
               </TableHead>
-              <TableHead className="w-28 text-right text-xs uppercase tracking-wider text-muted-foreground">
-                Qtd. Deflatores
+              <TableHead className="w-16 text-right text-xs uppercase tracking-wider text-muted-foreground">
+                Qtd.
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {rows.map((r) => {
-              const pct = max ? (r.qtd / max) * 100 : 0;
-              const share = total ? (r.qtd / total) * 100 : 0;
-              return (
-                <HoverCard key={r.nome} openDelay={80} closeDelay={80}>
-                  <HoverCardTrigger asChild>
-                    <TableRow className="cursor-default border-border/50 hover:bg-accent/40">
-                      <TableCell className="max-w-0 truncate text-sm font-medium text-foreground">
-                        <div className="truncate" title={r.nome}>
-                          {r.nome}
-                        </div>
-                        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                          <div
-                            className="h-full rounded-full bg-gradient-to-r from-ancora-blue to-ancora-blue-light"
-                            style={{ width: `${Math.min(100, pct)}%` }}
-                          />
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center text-sm font-semibold tabular-nums text-foreground">
-                        {r.regiao}
-                      </TableCell>
-                      <TableCell className="text-right text-sm font-semibold tabular-nums text-foreground">
-                        {fmt(r.qtd)}
-                      </TableCell>
-                    </TableRow>
-                  </HoverCardTrigger>
-                  <HoverCardContent side="left" align="start" className="w-72 border-0 p-0 shadow-card-hover">
-                    <div className="rounded-t-md bg-gradient-to-r from-ancora-blue-dark to-ancora-blue px-3 py-2 text-white">
-                      <p className="truncate text-sm font-semibold" title={r.nome}>
+            {rows.map((r) => (
+              <HoverCard key={r.nome} openDelay={80} closeDelay={80}>
+                <HoverCardTrigger asChild>
+                  <TableRow className="cursor-default border-border/60 hover:bg-accent/40">
+                    <TableCell className="max-w-0 truncate text-sm font-medium text-foreground">
+                      <div className="truncate" title={r.nome}>
                         {r.nome}
-                      </p>
-                      <p className="text-[11px] text-white/80">
-                        {fmt(r.qtd)} deflatores · {fmtPct(share)} do total
-                      </p>
-                    </div>
-                    <ul className="divide-y divide-border/60 p-2">
-                      {DEFLATORES.map((d) => {
-                        const q = r.breakdown[d] ?? 0;
-                        const p = r.qtd ? (q / r.qtd) * 100 : 0;
-                        return (
-                          <li key={d} className="flex items-center justify-between gap-3 py-1.5">
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-[12px] font-medium text-foreground">{d}</p>
-                              <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">
-                                <div
-                                  className="h-full rounded-full bg-ancora-red"
-                                  style={{ width: `${Math.min(100, p)}%` }}
-                                />
-                              </div>
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-ancora-red"
+                          style={{ width: `${max ? Math.min(100, (r.qtd / max) * 100) : 0}%` }}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center text-sm font-semibold tabular-nums text-foreground">
+                      {r.regiao}
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-semibold tabular-nums text-foreground">
+                      {fmt(r.qtd)}
+                    </TableCell>
+                  </TableRow>
+                </HoverCardTrigger>
+                <HoverCardContent side="left" align="start" className="w-72 border border-border p-0 shadow-card-hover">
+                  <div className="rounded-t-md bg-ancora-blue px-3 py-2 text-white">
+                    <p className="truncate text-sm font-semibold" title={r.nome}>
+                      {r.nome}
+                    </p>
+                    <p className="text-[11px] text-white/80">
+                      {fmt(r.qtd)} deflatores · {total ? fmtPct((r.qtd / total) * 100) : "0%"} do total
+                    </p>
+                  </div>
+                  <ul className="divide-y divide-border p-2">
+                    {causas.map((d) => {
+                      const q = r.breakdown[d] ?? 0;
+                      const p = r.qtd ? (q / r.qtd) * 100 : 0;
+                      return (
+                        <li key={d} className="flex items-center justify-between gap-3 py-1.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[12px] font-medium text-foreground">{d}</p>
+                            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-ancora-red" style={{ width: `${Math.min(100, p)}%` }} />
                             </div>
-                            <span className="tabular-nums text-[12px] font-semibold text-foreground">{fmt(q)}</span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </HoverCardContent>
-                </HoverCard>
-              );
-            })}
+                          </div>
+                          <span className="tabular-nums text-[12px] font-semibold text-foreground">{fmt(q)}</span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </HoverCardContent>
+              </HoverCard>
+            ))}
             {rows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={3} className="py-10 text-center text-sm text-muted-foreground">
@@ -419,60 +352,18 @@ function DeflatoresRankTable({
           </TableBody>
         </Table>
       </ScrollArea>
-    </Card>
+    </PanelCard>
   );
 }
 
-function StatusPanel({
-  title,
-  icon: Icon,
-  tone,
-  items,
-}: {
-  title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  tone: "warn" | "success";
-  items: { label: string; value: number }[];
-}) {
-  const total = items.reduce((s, i) => s + i.value, 0);
-  const headerCls = tone === "warn" ? "from-amber-500 to-amber-600" : "from-emerald-600 to-emerald-700";
-  const accentCls = tone === "warn" ? "text-amber-600" : "text-emerald-600";
-  return (
-    <Card className="overflow-hidden border-0 shadow-card">
-      <div className={`flex items-center justify-between bg-gradient-to-r ${headerCls} px-4 py-2.5 text-white`}>
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4" />
-          <h3 className="text-sm font-semibold uppercase tracking-wider">{title}</h3>
-        </div>
-        
-      </div>
-      <div className="grid grid-cols-3 divide-x divide-border/60">
-        {items.map((it) => {
-          const pct = total ? (it.value / total) * 100 : 0;
-          return (
-            <div key={it.label} className="p-4 text-center">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{it.label}</p>
-              <p className={`mt-2 text-2xl font-bold tabular-nums ${accentCls}`}>{fmt(it.value)}</p>
-              <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">{fmtPct(pct)}</p>
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
-
-type QuickKey = "emTratativa" | "finalizados" | "procedentes" | "improcedentes";
-
+type QuickKey = "abertos" | "finalizados";
 const QUICK_MATCH: Record<QuickKey, (r: Chamado) => boolean> = {
-  emTratativa: (r) => r.acao !== "FINALIZADO",
+  abertos: (r) => r.acao !== "FINALIZADO",
   finalizados: (r) => r.acao === "FINALIZADO",
-  procedentes: (r) => r.parecer === "Procedente",
-  improcedentes: (r) => r.parecer === "Improcedente",
 };
 
 export default function Dashboard() {
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ["chamados"],
     queryFn: fetchChamados,
     staleTime: 5 * 60 * 1000,
@@ -481,7 +372,7 @@ export default function Dashboard() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background px-4">
-        <p className="text-sm text-muted-foreground">Carregando chamados...</p>
+        <p className="text-sm text-muted-foreground">Carregando chamados…</p>
       </div>
     );
   }
@@ -495,8 +386,7 @@ export default function Dashboard() {
             Não foi possível carregar os dados dos chamados
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            {(error as Error)?.message ??
-              "Verifique sua conexão e tente novamente em alguns instantes."}
+            {(error as Error)?.message ?? "Verifique sua conexão e tente novamente em alguns instantes."}
           </p>
           <Button className="mt-4" onClick={() => refetch()}>
             Tentar novamente
@@ -506,43 +396,55 @@ export default function Dashboard() {
     );
   }
 
-  return <DashboardView rows={data} />;
+  return <DashboardView rows={data} atualizadoEm={dataUpdatedAt} onReload={() => refetch()} />;
 }
 
-function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
+function DashboardView({
+  rows: ROWS,
+  atualizadoEm,
+  onReload,
+}: {
+  rows: Chamado[];
+  atualizadoEm: number;
+  onReload: () => void;
+}) {
   const ANOS = useMemo(() => uniqueSorted(ROWS.map((r) => r.ano)), [ROWS]);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
-
   const [compareMode, setCompareMode] = useState(false);
+  const [semestre, setSemestre] = useState<"all" | "1" | "2">("all");
   const [quick, setQuick] = useState<QuickKey[]>([]);
 
   const set = (k: keyof Filters) => (v: string) => setFilters((f) => ({ ...f, [k]: v }));
   const toggleQuick = (k: QuickKey) => () =>
     setQuick((q) => (q.includes(k) ? q.filter((x) => x !== k) : [...q, k]));
-  const matchQuick = (rows: Chamado[], keys: QuickKey[]) =>
-    keys.length ? rows.filter((r) => keys.some((k) => QUICK_MATCH[k](r))) : rows;
 
-  // Options derived from full dataset so users can always pick.
-  const opts = useMemo(() => {
-    return {
+  const refine = (rows: Chamado[], keys: QuickKey[]) => {
+    let out = rows;
+    if (semestre !== "all") out = out.filter((r) => (semestre === "1" ? r.mes <= 6 : r.mes >= 7));
+    if (keys.length) out = out.filter((r) => keys.some((k) => QUICK_MATCH[k](r)));
+    return out;
+  };
+
+  const opts = useMemo(
+    () => ({
       anos: ANOS,
       meses: uniqueSorted(ROWS.map((r) => r.mes)),
       dias: uniqueSorted(ROWS.map((r) => r.dia).filter((d) => d > 0)),
       clientes: uniqueSorted(ROWS.map((r) => r.cliente)),
       cds: uniqueSorted(ROWS.map((r) => r.cd)),
       regioes: uniqueSorted(ROWS.map((r) => r.regiao)),
-
       conferentes: uniqueSorted(ROWS.map((r) => r.conferente)),
       tipos: uniqueSorted(ROWS.map((r) => r.tipo)),
       statuses: uniqueSorted(ROWS.map((r) => r.status)),
       pareceres: uniqueSorted(ROWS.map((r) => r.parecer)),
-    };
-  }, [ROWS, ANOS]);
+    }),
+    [ROWS, ANOS],
+  );
 
-  const filtered = useMemo(() => {
-    const base = applyFilters(ROWS, filters);
-    return matchQuick(base, quick);
-  }, [ROWS, filters, quick]);
+  const filtered = useMemo(
+    () => refine(applyFilters(ROWS, filters), quick),
+    [ROWS, filters, quick, semestre],
+  );
   const kpis = useMemo(() => computeKpis(filtered), [filtered]);
 
   const { currentKpis, prevKpis, currentLabel, previousLabel } = useMemo(() => {
@@ -550,59 +452,85 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
     const currentYear = filters.ano === "all" ? String(latest) : filters.ano;
     const idx = ANOS.indexOf(Number(currentYear));
     const prev = idx > 0 ? ANOS[idx - 1] : (ANOS[idx + 1] ?? ANOS[idx]);
-    const previousYear = String(prev);
-    const pick = (ano: string) => {
-      const base = applyFilters(ROWS, { ...filters, ano });
-      return matchQuick(base, quick);
-    };
+    const pick = (ano: string) => refine(applyFilters(ROWS, { ...filters, ano }), quick);
     return {
       currentKpis: computeKpis(pick(currentYear)),
-      prevKpis: computeKpis(pick(previousYear)),
+      prevKpis: computeKpis(pick(String(prev))),
       currentLabel: currentYear,
-      previousLabel: previousYear,
+      previousLabel: String(prev),
     };
-  }, [ROWS, ANOS, filters, quick]);
+  }, [ROWS, ANOS, filters, quick, semestre]);
 
-
-  const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);
-  const deflatoresList = useMemo(() => deflatoresPorColaborador(filtered, 20), [filtered]);
-  const deflatoresTotal = useMemo(() => deflatoresList.reduce((s, r) => s + r.qtd, 0), [deflatoresList]);
-
-  // Consolidated (S1/2025 + S1/2026) panels
-  const consolidated = useMemo(() => {
+  const totals = useMemo(() => {
+    let abertos = 0,
+      finalizados = 0,
+      valorTotal = 0,
+      valorAbertos = 0,
+      valorFinalizados = 0;
     let procAncora = 0,
       procLoja = 0,
       emTratativa = 0,
-      improcedentes = 0,
-      finalizados = 0,
-      procedentes = 0;
+      procedentes = 0,
+      improcedentes = 0;
     for (const r of filtered) {
-      if (r.parecer === "Procedente") procedentes++;
-      if (r.parecer === "Procedente" && r.acao === "ANCORA") procAncora++;
-      if (r.parecer === "Procedente" && r.acao === "LOJA") procLoja++;
-      if (r.acao !== "FINALIZADO") emTratativa++;
-      if (r.parecer === "Improcedente") improcedentes++;
-      if (r.acao === "FINALIZADO") finalizados++;
+      valorTotal += r.valor;
+      const aberto = r.acao !== "FINALIZADO";
+      if (aberto) {
+        abertos++;
+        valorAbertos += r.valor;
+        const s = r.sub.toLowerCase();
+        if (s.includes("ancora") || s.includes("âncora")) procAncora++;
+        else if (s.includes("loja")) procLoja++;
+        else emTratativa++;
+      } else {
+        finalizados++;
+        valorFinalizados += r.valor;
+        if (r.parecer === "Improcedente") improcedentes++;
+        else procedentes++;
+      }
     }
-    return { procAncora, procLoja, emTratativa, improcedentes, finalizados, procedentes };
+    return {
+      abertos,
+      finalizados,
+      valorTotal,
+      valorAbertos,
+      valorFinalizados,
+      procAncora,
+      procLoja,
+      emTratativa,
+      procedentes,
+      improcedentes,
+    };
   }, [filtered]);
+
+  const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);
+  const defExp = useMemo(
+    () => deflatoresRank(filtered, DEFLATORES_EXPEDICAO, (r) => r.confExp, 20),
+    [filtered],
+  );
+  const defCheck = useMemo(
+    () => deflatoresRank(filtered, DEFLATORES_CHECKOUT, (r) => r.confCheck, 20),
+    [filtered],
+  );
 
   const exportXlsx = () => {
     const data = filtered.map((r) => ({
       "Nº Chamado (Portal)": r.idPortal,
-      "Nº Benner": r.numeroBenner ?? "",
       Data: r.data ?? "",
       Ano: r.ano,
       Mês: r.mes,
       Dia: r.dia,
       Cliente: r.cliente,
       Região: r.regiao,
+      CD: r.cd,
       Modalidade: r.modalidade,
       Tipo: r.tipo,
       Status: r.status,
-      Ação: r.acao,
-      Parecer: r.parecer,
-      "Conferente de Expedição": r.conferente,
+      Procedência: r.sub,
+      "Causa Raiz": r.causaRaiz,
+      Valor: r.valor,
+      "Conferente de Expedição": r.confExp,
+      "Conferente de Checkout": r.confCheck,
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
@@ -612,7 +540,7 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
 
   const exportPdf = () => {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    doc.setFillColor(30, 64, 130);
+    doc.setFillColor(0, 43, 92);
     doc.rect(0, 0, doc.internal.pageSize.getWidth(), 60, "F");
     doc.setTextColor(255);
     doc.setFontSize(14);
@@ -620,62 +548,68 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
     doc.setFontSize(10);
     doc.text(`Total filtrado: ${fmt(kpis.total)} chamados`, 30, 46);
 
-    const kpiRows = [
-      ["Chamados Normais", fmt(kpis.normais)],
-      ["Chamados Crossdocking", fmt(kpis.crossdocking)],
-      ["Participação Crossdocking", fmtPct(kpis.crossParticipacao)],
-      ["Ação ANCORA (HD)", fmt(kpis.acaoAncora)],
-      ["Ação Loja", fmt(kpis.acaoLoja)],
-      ["Ação Terceiros", fmt(kpis.acaoTerceiros)],
-      ["Procedentes", fmt(kpis.procedentes)],
-      ["Improcedentes", fmt(kpis.improcedentes)],
-      ["Em Tratativa", fmt(kpis.emTratativa)],
-      ["Finalizados", fmt(kpis.finalizados)],
-      ["Total de Chamados", fmt(kpis.total)],
-    ];
     autoTable(doc, {
       startY: 80,
       head: [["Indicador", "Valor"]],
-      body: kpiRows,
+      body: [
+        ["Total de Chamados", fmt(kpis.total)],
+        ["Abertos", fmt(totals.abertos)],
+        ["Finalizados", fmt(totals.finalizados)],
+        ["Procedente Ancora", fmt(totals.procAncora)],
+        ["Procedente Loja", fmt(totals.procLoja)],
+        ["Em Tratativa", fmt(totals.emTratativa)],
+        ["Procedentes", fmt(totals.procedentes)],
+        ["Improcedentes", fmt(totals.improcedentes)],
+        ["Valor total", fmtMoney(totals.valorTotal)],
+      ],
       theme: "grid",
-      headStyles: { fillColor: [30, 64, 130] },
+      headStyles: { fillColor: [0, 43, 92] },
       styles: { fontSize: 9 },
       margin: { left: 30, right: 30 },
       tableWidth: 300,
     });
-
     autoTable(doc, {
       startY: 80,
       head: [["Cliente", "Qtd."]],
       body: clientesRank.slice(0, 15).map((r) => [r.nome, fmt(r.qtd)]),
       theme: "grid",
-      headStyles: { fillColor: [30, 64, 130] },
+      headStyles: { fillColor: [0, 43, 92] },
       styles: { fontSize: 8 },
       margin: { left: 350, right: 30 },
       tableWidth: 460,
     });
-
     doc.save("chamados-helpdesk-ancora.pdf");
   };
 
+  const semBtn = (v: "1" | "2", label: string) => (
+    <button
+      onClick={() => setSemestre((s) => (s === v ? "all" : v))}
+      className={`h-9 px-3 text-xs font-semibold transition ${
+        semestre === v ? "bg-white text-ancora-blue" : "bg-white/15 text-white hover:bg-white/25"
+      }`}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top bar */}
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-gradient-to-r from-ancora-blue-dark via-ancora-blue to-ancora-blue-dark text-white shadow-md">
+    <div className="min-h-screen bg-ancora-surface">
+      <header className="sticky top-0 z-30 bg-ancora-blue text-white shadow-md print:static">
         <div className="flex flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 items-center justify-center rounded-lg bg-white px-3 shadow-sm">
               <img src={logoAncora} alt="Rede Ancora" width={1536} height={512} className="h-7 w-auto" />
             </div>
             <div>
-
               <h1 className="text-base font-semibold leading-tight sm:text-lg">
-                Análise Comparativa dos Chamados de Help Desk da ANCORA
+                Análise Comparativa dos Chamados de Help Desk
               </h1>
-              <p className="text-[11px] text-white/60">Última atualização: {ULTIMA_ATUALIZACAO}</p>
+              <p className="text-[11px] text-white/60">
+                Última atualização: {new Date(atualizadoEm).toLocaleString("pt-BR")}
+              </p>
             </div>
           </div>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center gap-2 print:hidden">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
               <Input
@@ -685,9 +619,14 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
                 className="h-9 w-64 border-white/20 bg-white/10 pl-9 text-sm text-white placeholder:text-white/60 focus-visible:ring-white/40"
               />
             </div>
+            <div className="flex overflow-hidden rounded-md border border-white/20">
+              {semBtn("1", "1º Semestre")}
+              <span className="w-px bg-white/20" />
+              {semBtn("2", "2º Semestre")}
+            </div>
             <Button
               size="sm"
-              variant={compareMode ? "default" : "secondary"}
+              variant="secondary"
               className={`h-9 gap-1.5 ${compareMode ? "bg-white text-ancora-blue hover:bg-white/90" : "bg-white/15 text-white hover:bg-white/25"}`}
               onClick={() => setCompareMode((v) => !v)}
             >
@@ -701,6 +640,7 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
             >
               <FileSpreadsheet className="h-4 w-4" /> Excel
             </Button>
+            <ImportDialog onDone={onReload} />
             <Button
               size="sm"
               variant="secondary"
@@ -714,9 +654,8 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
       </header>
 
       <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-5 sm:px-6 lg:flex-row">
-        {/* Sidebar filters */}
-        <aside className="lg:w-64 lg:shrink-0">
-          <Card className="border-0 p-4 shadow-card lg:sticky lg:top-[76px]">
+        <aside className="lg:w-[260px] lg:shrink-0 print:hidden">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-card lg:sticky lg:top-[76px]">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-ancora-blue" />
@@ -729,6 +668,7 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
                 onClick={() => {
                   setFilters(emptyFilters);
                   setQuick([]);
+                  setSemestre("all");
                 }}
               >
                 <RotateCcw className="h-3 w-3" /> Limpar
@@ -762,128 +702,97 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
                 options={opts.pareceres}
               />
             </div>
-          </Card>
+          </div>
         </aside>
 
         <main className="min-w-0 flex-1 space-y-5">
-          {/* KPI cards */}
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <KpiCard
               label="Total de Chamados"
-              single={!compareMode}
-              singleValue={fmt(kpis.total)}
-              value2026={fmt(currentKpis.total)}
-              value2025={fmt(prevKpis.total)}
-              delta={computeDelta(currentKpis.total, prevKpis.total)}
+              value={kpis.total}
+              valor={totals.valorTotal}
+              color={GRAY}
               icon={Activity}
-              tone="blue"
-              currentLabel={currentLabel}
-              previousLabel={previousLabel}
               onClick={() => setQuick([])}
-              sublabel={quick.length ? "Clique para limpar o filtro dos cards" : undefined}
+              compare={
+                compareMode
+                  ? { current: currentKpis.total, previous: prevKpis.total, currentLabel, previousLabel }
+                  : undefined
+              }
             />
             <KpiCard
-              label="Em Tratativa"
-              single={!compareMode}
-              singleValue={fmt(kpis.emTratativa)}
-              value2026={fmt(currentKpis.emTratativa)}
-              value2025={fmt(prevKpis.emTratativa)}
-              delta={computeDelta(currentKpis.emTratativa, prevKpis.emTratativa)}
+              label="Abertos"
+              value={totals.abertos}
+              valor={totals.valorAbertos}
+              color={AMBER}
               icon={Hourglass}
-              tone="warn"
-              currentLabel={currentLabel}
-              previousLabel={previousLabel}
-              onClick={toggleQuick("emTratativa")}
-              active={quick.includes("emTratativa")}
+              onClick={toggleQuick("abertos")}
+              active={quick.includes("abertos")}
+              compare={
+                compareMode
+                  ? {
+                      current: currentKpis.emTratativa,
+                      previous: prevKpis.emTratativa,
+                      currentLabel,
+                      previousLabel,
+                    }
+                  : undefined
+              }
             />
             <KpiCard
               label="Finalizados"
-              single={!compareMode}
-              singleValue={fmt(kpis.finalizados)}
-              value2026={fmt(currentKpis.finalizados)}
-              value2025={fmt(prevKpis.finalizados)}
-              delta={computeDelta(currentKpis.finalizados, prevKpis.finalizados)}
+              value={totals.finalizados}
+              valor={totals.valorFinalizados}
+              color={GREEN}
               icon={CheckCircle2}
-              tone="success"
-              currentLabel={currentLabel}
-              previousLabel={previousLabel}
               onClick={toggleQuick("finalizados")}
               active={quick.includes("finalizados")}
+              compare={
+                compareMode
+                  ? {
+                      current: currentKpis.finalizados,
+                      previous: prevKpis.finalizados,
+                      currentLabel,
+                      previousLabel,
+                    }
+                  : undefined
+              }
             />
-            <KpiCard
-              label="Procedentes"
-              single={!compareMode}
-              singleValue={fmt(kpis.procedentes)}
-              value2026={fmt(currentKpis.procedentes)}
-              value2025={fmt(prevKpis.procedentes)}
-              delta={computeDelta(currentKpis.procedentes, prevKpis.procedentes)}
-              icon={BadgeCheck}
-              tone="success"
-              currentLabel={currentLabel}
-              previousLabel={previousLabel}
-              onClick={toggleQuick("procedentes")}
-              active={quick.includes("procedentes")}
-            />
-            <KpiCard
-              label="Improcedentes"
-              single={!compareMode}
-              singleValue={fmt(kpis.improcedentes)}
-              value2026={fmt(currentKpis.improcedentes)}
-              value2025={fmt(prevKpis.improcedentes)}
-              delta={computeDelta(currentKpis.improcedentes, prevKpis.improcedentes)}
-              icon={XCircle}
-              tone="red"
-              currentLabel={currentLabel}
-              previousLabel={previousLabel}
-              onClick={toggleQuick("improcedentes")}
-              active={quick.includes("improcedentes")}
-            />
-
           </section>
 
-          {/* Consolidated status panels (S1/2025 + S1/2026) */}
           <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <StatusPanel
               title="Chamados em Aberto"
               icon={Hourglass}
-              tone="warn"
+              color={AMBER}
               items={[
-                { label: "Procedente ANCORA", value: consolidated.procAncora },
-                { label: "Procedente Loja", value: consolidated.procLoja },
-                { label: "Em Tratativa", value: consolidated.emTratativa },
+                { label: "Procedente Ancora", value: totals.procAncora },
+                { label: "Procedente Loja", value: totals.procLoja },
+                { label: "Em Tratativa", value: totals.emTratativa },
               ]}
             />
             <StatusPanel
               title="Chamados Fechados"
               icon={CheckCircle2}
-              tone="success"
+              color={GREEN}
               items={[
-                { label: "Procedentes", value: consolidated.procedentes },
-                { label: "Improcedentes", value: consolidated.improcedentes },
-                { label: "Finalizados", value: consolidated.finalizados },
+                { label: "Procedentes", value: totals.procedentes },
+                { label: "Improcedentes", value: totals.improcedentes },
               ]}
             />
           </section>
 
-          {/* Tables */}
-          <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-            <RankTable
-              title="Ranking por Cliente"
-              icon={Building2}
-              rows={clientesRank}
-              header="Cliente"
-              total={kpis.total}
-            />
-            <DeflatoresRankTable rows={deflatoresList} total={deflatoresTotal} />
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_1fr_1fr]">
+            <PanelCard title="🏢 Ranking por Cliente" badge="Top 20">
+              <RankRows rows={clientesRank} total={kpis.total} />
+            </PanelCard>
+            <DeflatoresPanel title="Deflatores · Expedição" rows={defExp} causas={DEFLATORES_EXPEDICAO} />
+            <DeflatoresPanel title="Deflatores · Checkout" rows={defCheck} causas={DEFLATORES_CHECKOUT} />
           </section>
 
-          <p className="pb-6 pt-2 text-center text-xs text-muted-foreground">
-            Fonte: aba <span className="font-medium text-foreground">"Rel. Cham. Atual 010726"</span> ·{" "}
-            {fmt(ROWS.length)} chamados na base ·{" "}
-            <span className="inline-flex items-center gap-1">
-              <ArrowDownToLine className="h-3 w-3" /> Ban <Ban className="hidden" />
-              Atualização automática ao alterar filtros
-            </span>
+          <p className="flex items-center justify-center gap-1 pb-6 pt-2 text-center text-xs text-muted-foreground">
+            <Building2 className="h-3 w-3" /> {fmt(ROWS.length)} chamados na base · atualização automática ao alterar
+            filtros
           </p>
         </main>
       </div>

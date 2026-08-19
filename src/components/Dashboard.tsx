@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
-import chamadosData from "@/data/chamados.json";
+import { useQuery } from "@tanstack/react-query";
+import { fetchChamados } from "@/lib/chamados-api";
+
 import {
   applyFilters,
   computeDelta,
   computeKpis,
-  decodeChamados,
 
   DEFLATORES,
   fmtDelta,
@@ -56,7 +57,7 @@ import autoTable from "jspdf-autotable";
 
 const ULTIMA_ATUALIZACAO = "08/08/2026 12:15";
 
-const ROWS: Chamado[] = decodeChamados(chamadosData);
+
 
 
 function FilterSelect({
@@ -470,10 +471,48 @@ const QUICK_MATCH: Record<QuickKey, (r: Chamado) => boolean> = {
   improcedentes: (r) => r.parecer === "Improcedente",
 };
 
-const ANOS = uniqueSorted(ROWS.map((r) => r.ano));
-
 export default function Dashboard() {
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["chamados"],
+    queryFn: fetchChamados,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <p className="text-sm text-muted-foreground">Carregando chamados...</p>
+      </div>
+    );
+  }
+
+  if (isError || !data) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="max-w-md p-6 text-center">
+          <AlertTriangle className="mx-auto h-8 w-8 text-ancora-red" />
+          <h2 className="mt-3 text-base font-semibold text-foreground">
+            Não foi possível carregar os dados dos chamados
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {(error as Error)?.message ??
+              "Verifique sua conexão e tente novamente em alguns instantes."}
+          </p>
+          <Button className="mt-4" onClick={() => refetch()}>
+            Tentar novamente
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  return <DashboardView rows={data} />;
+}
+
+function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
+  const ANOS = useMemo(() => uniqueSorted(ROWS.map((r) => r.ano)), [ROWS]);
   const [filters, setFilters] = useState<Filters>({ ...emptyFilters });
+
   const [compareMode, setCompareMode] = useState(false);
   const [quick, setQuick] = useState<QuickKey[]>([]);
 
@@ -498,12 +537,12 @@ export default function Dashboard() {
       statuses: uniqueSorted(ROWS.map((r) => r.status)),
       pareceres: uniqueSorted(ROWS.map((r) => r.parecer)),
     };
-  }, []);
+  }, [ROWS, ANOS]);
 
   const filtered = useMemo(() => {
     const base = applyFilters(ROWS, filters);
     return matchQuick(base, quick);
-  }, [filters, quick]);
+  }, [ROWS, filters, quick]);
   const kpis = useMemo(() => computeKpis(filtered), [filtered]);
 
   const { currentKpis, prevKpis, currentLabel, previousLabel } = useMemo(() => {
@@ -522,7 +561,7 @@ export default function Dashboard() {
       currentLabel: currentYear,
       previousLabel: previousYear,
     };
-  }, [filters, quick]);
+  }, [ROWS, ANOS, filters, quick]);
 
 
   const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);

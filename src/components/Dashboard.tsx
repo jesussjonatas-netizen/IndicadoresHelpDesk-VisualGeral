@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
-import chamadosData from "@/data/chamados.json";
+import { useQuery } from "@tanstack/react-query";
+import { fetchChamados } from "@/lib/chamados-api";
+
 import {
   applyFilters,
   computeDelta,

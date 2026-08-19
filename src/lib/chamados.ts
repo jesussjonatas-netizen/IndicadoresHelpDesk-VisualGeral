@@ -15,7 +15,88 @@ export type Chamado = {
   causaRaiz: string;
   dia: number;
   data: string | null;
+  valor: number;
+  confExp: string;
+  confCheck: string;
+  sub: string;
 };
+
+const norm = (s: string) => s.replace(/\s+/g, " ").trim().toUpperCase();
+
+export const DEFLATORES_CHECKOUT = [
+  "FALTA CHECK OUT",
+  "SOBRA CHECK OUT",
+  "AVARIA CHECK OUT",
+  "ERRO DE ETIQUETAGEM CHECK OUT",
+  "INVERSÃO CHECK OUT",
+  "LIDERANÇA CHECK OUT",
+] as const;
+
+export const DEFLATORES_EXPEDICAO = [
+  "FALTA CROSSDOCKING",
+  "SOBRA CROSSDOCKING",
+  "AVARIA CROSSDOCKING",
+  "ERRO DE ETIQUETAGEM CROSSDOCKING",
+  "INVERSÃO CROSSDOCKING",
+  "FALTA EXPEDIÇÃO",
+  "ERRO DE ETIQUETAGEM EXPEDIÇÃO",
+] as const;
+
+export type DeflatorRank = {
+  nome: string;
+  regiao: string;
+  qtd: number;
+  breakdown: Record<string, number>;
+};
+
+export function deflatoresRank(
+  rows: Chamado[],
+  causas: readonly string[],
+  pickNome: (r: Chamado) => string,
+  limit = 20,
+): DeflatorRank[] {
+  const allow = new Set(causas.map(norm));
+  const map = new Map<string, DeflatorRank>();
+  const cdCount = new Map<string, Map<string, number>>();
+  for (const r of rows) {
+    const causa = norm(r.causaRaiz);
+    if (!allow.has(causa)) continue;
+    const nome = pickNome(r);
+    if (!nome || nome === "-") continue;
+    const sigla = cdSigla(r.cd);
+    let e = map.get(nome);
+    if (!e) {
+      e = {
+        nome,
+        regiao: sigla,
+        qtd: 0,
+        breakdown: Object.fromEntries(causas.map((c) => [c, 0])),
+      };
+      map.set(nome, e);
+      cdCount.set(nome, new Map());
+    }
+    e.qtd += 1;
+    const key = causas.find((c) => norm(c) === causa)!;
+    e.breakdown[key] += 1;
+    const rc = cdCount.get(nome)!;
+    rc.set(sigla, (rc.get(sigla) ?? 0) + 1);
+  }
+  for (const e of map.values()) {
+    const rc = cdCount.get(e.nome)!;
+    let bestReg = e.regiao;
+    let bestCount = -1;
+    for (const [reg, c] of rc) {
+      if (c > bestCount) {
+        bestCount = c;
+        bestReg = reg;
+      }
+    }
+    e.regiao = bestReg;
+  }
+  return Array.from(map.values())
+    .sort((a, b) => b.qtd - a.qtd)
+    .slice(0, limit);
+}
 
 
 export const DEFLATORES = [

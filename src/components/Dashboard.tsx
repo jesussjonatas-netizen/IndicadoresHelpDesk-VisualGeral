@@ -34,7 +34,6 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/h
 import {
   Activity,
   AlertTriangle,
-  Building2,
   CheckCircle2,
   FileSpreadsheet,
   FileText,
@@ -790,10 +789,17 @@ function DashboardView({
             <DeflatoresPanel title="Deflatores · Checkout" rows={defCheck} causas={DEFLATORES_CHECKOUT} />
           </section>
 
-          <p className="flex items-center justify-center gap-1 pb-6 pt-2 text-center text-xs text-muted-foreground">
-            <Building2 className="h-3 w-3" /> {fmt(ROWS.length)} chamados na base · atualização automática ao alterar
-            filtros
-          </p>
+                    <div className="flex flex-col items-center gap-1 pb-6 pt-2 text-center">
+            <p className="text-xs text-muted-foreground">
+              Fonte: base &quot;BI Help Desk - Claud&quot; · {fmt(filtered.length)} chamados na base filtrada
+              {semestre === "1" ? " · 1º Semestre" : semestre === "2" ? " · 2º Semestre" : ""} (tipo
+              &quot;Devolução&quot; e status &quot;Cancelado por tempo&quot;/&quot;Em Preparação&quot; desconsiderados)
+            </p>
+            <p className="text-[11px] text-muted-foreground/85">
+              As informações são extraídas do B2B — podem existir pequenas diferenças nos valores em função de
+              tributações.
+            </p>
+          </div>
         </main>
       </div>
     </div>

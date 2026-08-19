@@ -23,24 +23,24 @@ export type Chamado = {
 
 const norm = (s: string) => s.replace(/\s+/g, " ").trim().toUpperCase();
 
-export const DEFLATORES_CHECKOUT = [
+/**
+ * Lista única de causas-raiz que caracterizam um "deflator".
+ * A MESMA lista se aplica tanto ao card de Expedição quanto ao de Checkout —
+ * a diferença entre os dois cards está em qual coluna de conferente é usada
+ * (Conferente de Expedição vs. Conferente de Checkout), não na causa raiz.
+ */
+export const CAUSAS_DEFLATOR = [
   "FALTA CHECK OUT",
   "SOBRA CHECK OUT",
-  "AVARIA CHECK OUT",
   "ERRO DE ETIQUETAGEM CHECK OUT",
   "INVERSÃO CHECK OUT",
   "LIDERANÇA CHECK OUT",
+  "AVARIA CHECK OUT",
 ] as const;
 
-export const DEFLATORES_EXPEDICAO = [
-  "FALTA CROSSDOCKING",
-  "SOBRA CROSSDOCKING",
-  "AVARIA CROSSDOCKING",
-  "ERRO DE ETIQUETAGEM CROSSDOCKING",
-  "INVERSÃO CROSSDOCKING",
-  "FALTA EXPEDIÇÃO",
-  "ERRO DE ETIQUETAGEM EXPEDIÇÃO",
-] as const;
+// Mantidos por compatibilidade com o restante do código: ambos apontam para a mesma lista.
+export const DEFLATORES_CHECKOUT = CAUSAS_DEFLATOR;
+export const DEFLATORES_EXPEDICAO = CAUSAS_DEFLATOR;
 
 export type DeflatorRank = {
   nome: string;
@@ -98,24 +98,6 @@ export function deflatoresRank(
     .slice(0, limit);
 }
 
-
-export const DEFLATORES = [
-  "AVARIA CHECK OUT",
-  "ERRO DE ETIQUETAGEM CHECK OUT",
-  "FALTA CHECK OUT",
-  "INVERSÃO CHECK OUT",
-  "SOBRA CHECK OUT",
-] as const;
-
-export type DeflatorNome = (typeof DEFLATORES)[number];
-
-export type DeflatorPorColaborador = {
-  nome: string;
-  regiao: string;
-  qtd: number;
-  breakdown: Record<DeflatorNome, number>;
-};
-
 export const CD_SIGLA: Record<string, string> = {
   "REDE ANCORA - GO IMPORTADORA, EXPORTADORA E DISTRIBUIDORA DE AUTO PEÇAS S.A": "GO",
   "REDE ANCORA - ES IMPORTADORA, EXPORTADORA E DISTRIBUIDORA DE AUTO PEÇAS S.A": "ES",
@@ -136,55 +118,6 @@ export function cdSigla(cd: string): string {
   if (CD_SIGLA[cd]) return CD_SIGLA[cd];
   const m = cd.match(/-\s*([A-Z]{2})\b/);
   return m ? m[1] : cd.slice(0, 2).toUpperCase();
-}
-
-export function deflatoresPorColaborador(
-  rows: Chamado[],
-  limit = 20,
-): DeflatorPorColaborador[] {
-  const allow = new Set<string>(DEFLATORES);
-  const map = new Map<string, DeflatorPorColaborador>();
-  const cdCount = new Map<string, Map<string, number>>();
-  for (const r of rows) {
-    if (!allow.has(r.causaRaiz)) continue;
-    const nome = r.conferente;
-    if (!nome || nome === "-") continue;
-    const sigla = cdSigla(r.cd);
-    let e = map.get(nome);
-    if (!e) {
-      e = {
-        nome,
-        regiao: sigla,
-        qtd: 0,
-        breakdown: Object.fromEntries(DEFLATORES.map((d) => [d, 0])) as Record<
-          DeflatorNome,
-          number
-        >,
-      };
-      map.set(nome, e);
-      cdCount.set(nome, new Map());
-    }
-    e.qtd += 1;
-    e.breakdown[r.causaRaiz as DeflatorNome] += 1;
-    const rc = cdCount.get(nome)!;
-    rc.set(sigla, (rc.get(sigla) ?? 0) + 1);
-  }
-  for (const e of map.values()) {
-    const rc = cdCount.get(e.nome)!;
-    let bestReg = e.regiao;
-    let bestCount = -1;
-    for (const [reg, c] of rc) {
-      if (c > bestCount) {
-        bestCount = c;
-        bestReg = reg;
-      }
-    }
-    e.regiao = bestReg;
-  }
-
-  return Array.from(map.values())
-    .sort((a, b) => b.qtd - a.qtd)
-    .slice(0, limit);
 }
 
 export type Filters = {
@@ -243,7 +176,6 @@ export function applyFilters(rows: Chamado[], f: Filters): Chamado[] {
   });
 }
 
-
 export function uniqueSorted<T extends string | number>(arr: T[]): T[] {
   const set = new Set(arr.filter((v) => v !== null && v !== undefined && v !== "" && v !== "-"));
   return Array.from(set).sort((a, b) => {
@@ -278,7 +210,6 @@ export function computeKpis(rows: Chamado[]): Kpis {
     else if (r.acao === "LOJA") acaoLoja++;
     else if (r.acao === "TERCEIROS") acaoTerceiros++;
     else if (r.acao === "FINALIZADO") finalizados++;
-    // Em tratativa = chamado ainda não finalizado (ação diferente de FINALIZADO)
     if (r.acao !== "FINALIZADO") emTratativa++;
     if (r.parecer === "Procedente") procedentes++;
     else if (r.parecer === "Improcedente") improcedentes++;
@@ -325,30 +256,3 @@ export const fmtDelta = (d: Delta) => {
   const sign = d.direction === "up" ? "↑" : d.direction === "down" ? "↓" : "→";
   return `${sign} ${Math.abs(d.pct).toFixed(1).replace(".", ",")}%`;
 };
-
-
-// --- Decodificação da base compactada (formato colunar com dicionário) ---
-type EncodedChamados = {
-  dict: Record<string, string[]>;
-  rows: (number | string | null)[][];
-};
-
-const DICT_KEYS = [
-  "cliente","regiao","cd","modalidade","parecer","tipo","status","acao","conferente","causaRaiz",
-] as const;
-
-export function decodeChamados(data: unknown): Chamado[] {
-  const enc = data as EncodedChamados;
-  const d = enc.dict;
-  return enc.rows.map((r) => {
-    const o: Record<string, unknown> = {
-      mes: r[0], ano: r[1], idPortal: r[2], numeroBenner: r[3],
-    };
-    DICT_KEYS.forEach((k, i) => {
-      o[k] = d[k][r[4 + i] as number];
-    });
-    o.dia = r[14];
-    o.data = r[15];
-    return o as Chamado;
-  });
-}

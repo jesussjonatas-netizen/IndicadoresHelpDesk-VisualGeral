@@ -75,7 +75,76 @@ function toChamado(r: RawChamado): Chamado {
     causaRaiz: txt(r.causa_raiz),
     dia,
     data,
+    valor: Number(r.valor) || 0,
+    confExp: txt(r.conf_exp),
+    confCheck: txt(r.conf_check),
+    sub,
   };
+}
+
+export type UpsertRow = {
+  id_portal: number;
+  ano: number | null;
+  mes: number | null;
+  dia: number | null;
+  cliente: string | null;
+  cd: string | null;
+  regiao: string | null;
+  conf_exp: string | null;
+  conf_check: string | null;
+  tipo: string | null;
+  grupo: string | null;
+  subcategoria: string | null;
+  causa_raiz: string | null;
+  valor: number | null;
+  modalidade: string | null;
+};
+
+const HEADERS = {
+  apikey: SUPABASE_KEY,
+  Authorization: `Bearer ${SUPABASE_KEY}`,
+};
+
+export async function fetchChamadosRaw(): Promise<RawChamado[]> {
+  const out: RawChamado[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${TABLE}?select=*&order=id_portal.asc`,
+      {
+        headers: {
+          ...HEADERS,
+          Range: `${from}-${from + PAGE_SIZE - 1}`,
+          "Range-Unit": "items",
+        },
+      },
+    );
+    if (!res.ok) throw new Error(`Falha ao carregar chamados (${res.status})`);
+    const page = (await res.json()) as RawChamado[];
+    out.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+  return out;
+}
+
+export async function upsertChamados(rows: UpsertRow[]): Promise<void> {
+  const CHUNK = 500;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${TABLE}?on_conflict=id_portal`,
+      {
+        method: "POST",
+        headers: {
+          ...HEADERS,
+          "Content-Type": "application/json",
+          Prefer: "resolution=merge-duplicates,return=minimal",
+        },
+        body: JSON.stringify(rows.slice(i, i + CHUNK)),
+      },
+    );
+    if (!res.ok) {
+      throw new Error(`Falha ao gravar chamados (${res.status}): ${await res.text()}`);
+    }
+  }
 }
 
 export async function fetchChamados(): Promise<Chamado[]> {

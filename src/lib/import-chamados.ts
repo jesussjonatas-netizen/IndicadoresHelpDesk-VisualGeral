@@ -9,20 +9,103 @@ const norm = (s: string) =>
     .trim()
     .toLowerCase();
 
-const FIELD_ALIASES: Record<keyof UpsertRow | "data", string[]> = {
+/** Mapa Razão Social completa -> sigla curta do CD (idêntico ao dashboard HTML). */
+const CD_MAP: Record<string, string> = {
+  "rede ancora - go importadora, exportadora e distribuidora de auto pecas s.a": "GO",
+  "rede ancora - es importadora, exportadora e distribuidora de auto pecas s.a": "ES",
+  "rede ancora - mt importadora, exportadora e distribuidora de auto pecas s.a": "MT",
+  "rede ancora - pr importadora, exportadora e distribuidora de auto pecas s.a": "PR",
+  "rede ancora - mg importadora, exportadora e distribuidora de auto pecas s.a": "MG",
+  "rede ancora - sc importadora, exportadora e distribuidora de auto pecas s.a": "SC",
+  "rede ancora - ms importadora, exportadora e distribuidora de auto pecas s.a": "MS",
+  "filial - ananindeua (pa)": "PA",
+  "rede ancora - rj importadora, exportadora e distribuidora de auto pecas s.a": "RJ",
+  "rede ancora - pe importadora, exportadora e distribuidora de auto pecas s.a": "PE",
+  "rede ancora - al importadora, exportadora e distribuidora de autopecas s.a": "AL",
+  "rede ancora distrito federal e goias importadora exp. e dist. de auto pecas s.a": "DF",
+  "rede ancora - pa importadora, exportadora e distribuidora de autopecas s.a": "PA",
+};
+
+function cdShort(nameRaw: string): string {
+  const name = (nameRaw || "").trim();
+  if (!name) return "N/D";
+  const key = norm(name);
+  if (CD_MAP[key]) return CD_MAP[key];
+  const m = name.match(/REDE ANCORA - (\w+) /i);
+  if (m) return m[1].toUpperCase();
+  if (key.includes("distrito federal")) return "DF";
+  const m2 = name.match(/\((\w+)\)/);
+  if (m2) return m2[1].toUpperCase();
+  return name.slice(0, 6);
+}
+
+/** Mapas de classificação Status -> Ação / Parecer (idênticos ao dashboard HTML). */
+const STATUS_ACAO: Record<string, string> = {
+  "improcedente": "FINALIZADO", "resolvido": "FINALIZADO", "produtos recebidos": "ANCORA",
+  "aguardando analise da nota fiscal": "ANCORA", "em analise": "ANCORA",
+  "produtos enviados - aguardando recebimento no cd": "ANCORA", "em discordancia": "FINALIZADO",
+  "aguardando conciliacao financeira": "ANCORA", "verificando com o fornecedor": "ANCORA",
+  "emitindo nota fiscal de remessa": "ANCORA", "aguardando recebimento no cd": "ANCORA",
+  "aguardando envio ao cd": "LOJA", "aguardando atendimento": "ANCORA",
+  "aprovada - aguardando a nota fiscal de devolucao": "LOJA", "aguardando descarte": "LOJA",
+  "discordancia aceita": "ANCORA", "nota fiscal com impedimentos": "LOJA",
+  "organizar a coleta dos produtos": "ANCORA", "aguardando validacao do descarte": "ANCORA",
+  "aguardando lista de itens": "LOJA", "com erros": "LOJA", "coleta de produto programada": "ANCORA",
+  "verificando o interesse de outras lojas": "ANCORA", "verificando com a transportadora": "ANCORA",
+  "aguardando emissao da nfe para itens que o franqueado possui interesse": "ANCORA",
+  "aguardando chegada no cd": "ANCORA", "em tratativa com o gestor da filial": "ANCORA",
+  "encerrado": "FINALIZADO", "problema com o descarte": "LOJA",
+  "verificando estoque": "ANCORA", "recusa no sefaz realizada - validando": "ANCORA",
+};
+const STATUS_PARECER: Record<string, string> = {
+  "resolvido": "Procedente", "improcedente": "Improcedente",
+  "aprovada - aguardando a nota fiscal de devolucao": "Procedente", "encerrado": "Improcedente",
+  "aguardando conciliacao financeira": "Procedente", "emitindo nota fiscal de remessa": "Procedente",
+  "nota fiscal com impedimentos": "Procedente", "organizar a coleta dos produtos": "Procedente",
+  "aguardando analise da nota fiscal": "Procedente", "verificando com o fornecedor": "Em tratativa",
+  "em analise": "Em tratativa", "verificando com a transportadora": "Em tratativa",
+  "discordancia aceita": "Procedente", "com erros": "Procedente", "em discordancia": "Improcedente",
+  "aguardando validacao do descarte": "Procedente", "aguardando descarte": "Procedente",
+  "problema com o descarte": "Procedente", "aguardando recebimento no cd": "Procedente",
+  "coleta de produto programada": "Procedente",
+  "aguardando emissao da nfe para itens que o franqueado possui interesse": "Procedente",
+  "aguardando atendimento": "Em tratativa", "aguardando chegada no cd": "Procedente",
+  "aguardando lista de itens": "Em tratativa", "produtos recebidos": "Procedente",
+  "verificando o interesse de outras lojas": "Em tratativa",
+  "produtos enviados - aguardando recebimento no cd": "Procedente", "aguardando envio ao cd": "Procedente",
+  "em tratativa com o gestor da filial": "Em tratativa", "verificando estoque": "Em tratativa",
+  "recusa no sefaz realizada - validando": "Procedente",
+};
+
+/** Reproduz exatamente a função classificar(status) do dashboard HTML. */
+function classificar(statusRaw: string): { grupo: string; subcategoria: string } {
+  const key = norm(statusRaw);
+  const acao = STATUS_ACAO[key] ?? "ANCORA";
+  const parecer = STATUS_PARECER[key] ?? "Em tratativa";
+  if (acao === "FINALIZADO") {
+    if (parecer === "Procedente") return { grupo: "Fechado", subcategoria: "Procedentes" };
+    if (parecer === "Improcedente") return { grupo: "Fechado", subcategoria: "Improcedentes" };
+    return { grupo: "Fechado", subcategoria: "Finalizados" };
+  }
+  if (parecer === "Em tratativa") return { grupo: "Aberto", subcategoria: "Em Tratativa" };
+  if (acao === "ANCORA") return { grupo: "Aberto", subcategoria: "Procedente Ancora" };
+  if (acao === "LOJA") return { grupo: "Aberto", subcategoria: "Procedente Loja" };
+  return { grupo: "Aberto", subcategoria: "Em Tratativa" };
+}
+
+const FIELD_ALIASES: Record<string, string[]> = {
   id_portal: ["id portal", "id do portal", "numero do chamado", "n chamado", "chamado"],
+  data: ["data de entrada", "data entrada", "data"],
   ano: ["ano"],
   mes: ["mes"],
   dia: ["dia"],
-  data: ["data de entrada", "data entrada", "data"],
   cliente: ["cliente", "loja"],
   cd: ["cd", "centro de distribuicao"],
   regiao: ["regiao"],
   conf_exp: ["conferente de expedicao", "conferente expedicao", "conf exp"],
   conf_check: ["conferente de checkout", "conferente checkout", "conf check", "conferente de check out"],
   tipo: ["tipo", "tipo de chamado"],
-  grupo: ["grupo", "status"],
-  subcategoria: ["subcategoria", "procedencia", "parecer"],
+  status: ["status", "no status atual"],
   causa_raiz: ["causa raiz", "causa"],
   valor: ["valor", "valor em r$", "valor r$"],
   modalidade: ["modalidade"],
@@ -62,11 +145,12 @@ function parseDate(v: unknown): { ano: number | null; mes: number | null; dia: n
   return { ano: null, mes: null, dia: null };
 }
 
-/** Regras de exclusão da base. */
-export function isExcluded(tipo: string, status: string): boolean {
+/** Regras de exclusão da base (idênticas ao dashboard HTML): Tipo "Devolução" (exceto
+ * "Devolução para HD(Movidesk)") e Status "Cancelado por tempo" / "Em Preparação". */
+export function isExcluded(tipo: string, statusRaw: string): boolean {
   const t = norm(tipo);
-  const s = norm(status);
-  if (t.includes("devolucao") && !t.includes("movidesk")) return true;
+  const s = norm(statusRaw);
+  if (t === "devolucao") return true;
   if (s.includes("cancelado por tempo") || s.includes("em preparacao")) return true;
   return false;
 }
@@ -81,10 +165,10 @@ export async function parseImportFile(file: File): Promise<UpsertRow[]> {
   for (const row of raw) {
     const id = num(pick(row, FIELD_ALIASES.id_portal));
     if (!id) continue;
+
     const tipo = txt(pick(row, FIELD_ALIASES.tipo));
-    const grupoRaw = txt(pick(row, FIELD_ALIASES.grupo));
-    const subRaw = txt(pick(row, FIELD_ALIASES.subcategoria));
-    if (isExcluded(tipo, grupoRaw) || isExcluded(tipo, subRaw)) continue;
+    const statusRaw = txt(pick(row, FIELD_ALIASES.status));
+    if (isExcluded(tipo, statusRaw)) continue;
 
     let ano = num(pick(row, FIELD_ALIASES.ano));
     let mes = num(pick(row, FIELD_ALIASES.mes));
@@ -96,8 +180,7 @@ export async function parseImportFile(file: File): Promise<UpsertRow[]> {
       dia = dia || d.dia;
     }
 
-    const ng = norm(grupoRaw);
-    const grupo = ng.includes("aberto") ? "Aberto" : ng.includes("fechado") ? "Fechado" : grupoRaw;
+    const { grupo, subcategoria } = classificar(statusRaw);
 
     out.push({
       id_portal: id,
@@ -105,16 +188,16 @@ export async function parseImportFile(file: File): Promise<UpsertRow[]> {
       mes,
       dia,
       cliente: txt(pick(row, FIELD_ALIASES.cliente)),
-      cd: txt(pick(row, FIELD_ALIASES.cd)),
+      cd: cdShort(txt(pick(row, FIELD_ALIASES.cd))),
       regiao: txt(pick(row, FIELD_ALIASES.regiao)),
-      conf_exp: txt(pick(row, FIELD_ALIASES.conf_exp)),
-      conf_check: txt(pick(row, FIELD_ALIASES.conf_check)),
+      conf_exp: txt(pick(row, FIELD_ALIASES.conf_exp)) || "-",
+      conf_check: txt(pick(row, FIELD_ALIASES.conf_check)) || "-",
       tipo,
       grupo,
-      subcategoria: subRaw || grupoRaw,
-      causa_raiz: txt(pick(row, FIELD_ALIASES.causa_raiz)),
-      valor: num(pick(row, FIELD_ALIASES.valor)),
-      modalidade: txt(pick(row, FIELD_ALIASES.modalidade)),
+      subcategoria,
+      causa_raiz: txt(pick(row, FIELD_ALIASES.causa_raiz)) || "-",
+      valor: num(pick(row, FIELD_ALIASES.valor)) ?? 0,
+      modalidade: txt(pick(row, FIELD_ALIASES.modalidade)) || "N/D",
     });
   }
   return out;

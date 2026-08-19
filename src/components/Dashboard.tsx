@@ -6,7 +6,6 @@ import {
   applyFilters,
   computeDelta,
   computeKpis,
-  decodeChamados,
 
   DEFLATORES,
   fmtDelta,
@@ -538,12 +537,12 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
       statuses: uniqueSorted(ROWS.map((r) => r.status)),
       pareceres: uniqueSorted(ROWS.map((r) => r.parecer)),
     };
-  }, []);
+  }, [ROWS, ANOS]);
 
   const filtered = useMemo(() => {
     const base = applyFilters(ROWS, filters);
     return matchQuick(base, quick);
-  }, [filters, quick]);
+  }, [ROWS, filters, quick]);
   const kpis = useMemo(() => computeKpis(filtered), [filtered]);
 
   const { currentKpis, prevKpis, currentLabel, previousLabel } = useMemo(() => {
@@ -562,7 +561,7 @@ function DashboardView({ rows: ROWS }: { rows: Chamado[] }) {
       currentLabel: currentYear,
       previousLabel: previousYear,
     };
-  }, [filters, quick]);
+  }, [ROWS, ANOS, filters, quick]);
 
 
   const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);

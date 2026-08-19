@@ -42,6 +42,12 @@ function mapAcao(grupo: string, sub: string): string {
   return "EM TRATATIVA";
 }
 
+function pickConferente(exp: string, check: string): string {
+  if (exp && exp !== "-") return exp;
+  if (check && check !== "-") return check;
+  return exp || check;
+}
+
 function toChamado(r: RawChamado): Chamado {
   const grupo = txt(r.grupo);
   const sub = txt(r.subcategoria);
@@ -65,7 +71,7 @@ function toChamado(r: RawChamado): Chamado {
     tipo: txt(r.tipo),
     status: grupo,
     acao: mapAcao(grupo, sub),
-    conferente: txt(r.conf_exp) || txt(r.conf_check),
+    conferente: pickConferente(txt(r.conf_exp), txt(r.conf_check)),
     causaRaiz: txt(r.causa_raiz),
     dia,
     data,

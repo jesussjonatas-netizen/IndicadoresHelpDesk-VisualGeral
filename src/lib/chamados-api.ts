@@ -5,7 +5,7 @@ const SUPABASE_KEY = "sb_publishable_6SM6G3aVZujBmOjygB7jgg_kLhPbydy";
 const TABLE = "Chamados";
 const PAGE_SIZE = 1000;
 
-type RawChamado = {
+export type RawChamado = {
   id_portal: number | null;
   ano: number | null;
   mes: number | null;

@@ -121,24 +121,21 @@ export function cdSigla(cd: string): string {
 }
 
 /**
- * Filtros multi-seleção — cada campo é uma lista de valores selecionados
- * (array vazio = "Todos"). Reproduz exatamente o comportamento do dashboard HTML,
- * incluindo os 12 filtros: ano, mes, dia, cliente, cd, regiao, confExp, confCheck,
- * tipo, modalidade, status, procedencia (mapeado para o campo `sub`).
+ * Cada campo agora guarda um ARRAY de valores selecionados (array vazio = "Todos"),
+ * espelhando o combobox de multi-seleção do dashboard HTML (clique único = seleciona
+ * apenas aquele valor, Ctrl+clique = adiciona/remove da seleção).
  */
 export type Filters = {
-  ano: number[];
-  mes: number[];
-  dia: number[];
+  ano: string[];
+  mes: string[];
+  dia: string[];
   cliente: string[];
   cd: string[];
   regiao: string[];
-  confExp: string[];
-  confCheck: string[];
+  conferente: string[];
   tipo: string[];
-  modalidade: string[];
   status: string[];
-  procedencia: string[];
+  parecer: string[];
   search: string;
 };
 
@@ -149,12 +146,10 @@ export const emptyFilters: Filters = {
   cliente: [],
   cd: [],
   regiao: [],
-  confExp: [],
-  confCheck: [],
+  conferente: [],
   tipo: [],
-  modalidade: [],
   status: [],
-  procedencia: [],
+  parecer: [],
   search: "",
 };
 
@@ -162,34 +157,24 @@ export const MESES = [
   "Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez",
 ];
 
-type FilterFieldKey = Exclude<keyof Filters, "search">;
-const FIELD_MAP: Record<FilterFieldKey, keyof Chamado> = {
-  ano: "ano",
-  mes: "mes",
-  dia: "dia",
-  cliente: "cliente",
-  cd: "cd",
-  regiao: "regiao",
-  confExp: "confExp",
-  confCheck: "confCheck",
-  tipo: "tipo",
-  modalidade: "modalidade",
-  status: "status",
-  procedencia: "sub",
-};
-
-/** Aplica os filtros, opcionalmente ignorando uma chave (usado para calcular as
- * opções disponíveis de cada combobox com base nos demais filtros já ativos). */
-export function applyFilters(rows: Chamado[], f: Filters, excludeKey?: FilterFieldKey): Chamado[] {
+export function applyFilters(rows: Chamado[], f: Filters): Chamado[] {
   const s = f.search.trim().toLowerCase();
+  const match = (sel: string[], val: string) => sel.length === 0 || sel.includes(val);
   return rows.filter((r) => {
-    for (const key of Object.keys(FIELD_MAP) as FilterFieldKey[]) {
-      if (key === excludeKey) continue;
-      const sel = f[key] as (string | number)[];
-      if (sel.length && !sel.map(String).includes(String(r[FIELD_MAP[key]]))) return false;
-    }
+    if (!match(f.ano, String(r.ano))) return false;
+    if (!match(f.mes, String(r.mes))) return false;
+    if (!match(f.dia, String(r.dia))) return false;
+    if (!match(f.cliente, r.cliente)) return false;
+    if (!match(f.cd, r.cd)) return false;
+    if (!match(f.regiao, r.regiao)) return false;
+    if (!match(f.conferente, r.conferente)) return false;
+    if (!match(f.tipo, r.tipo)) return false;
+    if (!match(f.status, r.status)) return false;
+    if (!match(f.parecer, r.parecer)) return false;
     if (s) {
-      const hit = String(r.idPortal).includes(s) || r.cliente.toLowerCase().includes(s);
+      const hit =
+        String(r.idPortal).includes(s) ||
+        r.cliente.toLowerCase().includes(s);
       if (!hit) return false;
     }
     return true;
@@ -257,30 +242,23 @@ export function groupCount<T>(rows: T[], key: (r: T) => string, limit = 15) {
     .slice(0, limit);
 }
 
-/** Ranking por cliente incluindo o detalhamento por tipo de chamado
- * (usado no tooltip ao passar o mouse, igual ao dashboard HTML). */
-export type ClienteRank = { nome: string; qtd: number; tipos: { nome: string; qtd: number }[] };
-
-export function clienteRank(rows: Chamado[], limit = 20): ClienteRank[] {
-  const map = new Map<string, { qtd: number; tipos: Map<string, number> }>();
+/** Agrupa por cliente e também devolve o detalhamento por Tipo de Chamado
+ * (usado no tooltip do Ranking por Cliente, igual ao dashboard HTML). */
+export function clienteRankComTipos(rows: Chamado[], limit = 20) {
+  const map = new Map<string, { qtd: number; tipos: Record<string, number> }>();
   for (const r of rows) {
     if (!r.cliente || r.cliente === "-") continue;
     let e = map.get(r.cliente);
     if (!e) {
-      e = { qtd: 0, tipos: new Map() };
+      e = { qtd: 0, tipos: {} };
       map.set(r.cliente, e);
     }
     e.qtd++;
-    e.tipos.set(r.tipo, (e.tipos.get(r.tipo) ?? 0) + 1);
+    const t = r.tipo || "-";
+    e.tipos[t] = (e.tipos[t] ?? 0) + 1;
   }
   return Array.from(map.entries())
-    .map(([nome, e]) => ({
-      nome,
-      qtd: e.qtd,
-      tipos: Array.from(e.tipos.entries())
-        .map(([nome, qtd]) => ({ nome, qtd }))
-        .sort((a, b) => b.qtd - a.qtd),
-    }))
+    .map(([nome, d]) => ({ nome, qtd: d.qtd, tipos: d.tipos }))
     .sort((a, b) => b.qtd - a.qtd)
     .slice(0, limit);
 }

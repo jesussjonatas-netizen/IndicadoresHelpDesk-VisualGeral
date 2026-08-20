@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchChamados } from "@/lib/chamados-api";
 
 import {
   applyFilters,
+  clienteRankComTipos,
   computeDelta,
   computeKpis,
   DEFLATORES_CHECKOUT,
@@ -13,7 +14,6 @@ import {
   fmt,
   fmtDelta,
   fmtPct,
-  groupCount,
   MESES,
   uniqueSorted,
   type Chamado,
@@ -27,7 +27,6 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
@@ -53,35 +52,115 @@ const GRAY = "#6B7280";
 const fmtMoney = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-function FilterSelect({
+/**
+ * Combobox de multi-seleção — espelha exatamente o comportamento do dashboard HTML:
+ * clique único seleciona apenas aquele valor; Ctrl+clique (ou Cmd+clique) adiciona/remove
+ * da seleção; a lista tem busca; um botão "Aplicar" fecha o painel.
+ */
+function FilterMultiSelect({
   label,
-  value,
+  values,
   onChange,
   options,
   formatter,
 }: {
   label: string;
-  value: string;
-  onChange: (v: string) => void;
+  values: string[];
+  onChange: (v: string[]) => void;
   options: (string | number)[];
   formatter?: (v: string | number) => string;
 }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("click", onDocClick);
+    return () => document.removeEventListener("click", onDocClick);
+  }, []);
+
+  const filtered = search
+    ? options.filter((o) => {
+        const lbl = formatter ? String(formatter(o)) : String(o);
+        return lbl.toLowerCase().includes(search.toLowerCase());
+      })
+    : options;
+
+  const toggle = (v: string, ctrl: boolean) => {
+    if (ctrl) {
+      if (values.includes(v)) onChange(values.filter((x) => x !== v));
+      else onChange([...values, v]);
+    } else {
+      onChange([v]);
+    }
+  };
+
+  const n = values.length;
+
   return (
-    <div className="space-y-1.5">
+    <div className="relative space-y-1.5" ref={ref}>
       <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="h-9 bg-card text-sm">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent className="max-h-72">
-          <SelectItem value="all">Todos</SelectItem>
-          {options.map((o) => (
-            <SelectItem key={String(o)} value={String(o)}>
-              {formatter ? formatter(o) : String(o)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`flex h-9 w-full items-center justify-between gap-2 rounded-lg border px-3 text-left text-[12.5px] bg-card ${
+          n ? "border-ancora-blue-light bg-[#F3F7FC]" : "border-border"
+        }`}
+      >
+        <span className="truncate">{n ? `${n} selecionado${n > 1 ? "s" : ""}` : "Todos"}</span>
+        {n ? (
+          <span className="flex-shrink-0 rounded-full bg-ancora-red px-1.5 py-px text-[10px] font-semibold text-white">
+            {n}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">▾</span>
+        )}
+      </button>
+      {open && (
+        <div className="absolute z-30 mt-1 flex w-[270px] max-h-[300px] flex-col rounded-[10px] border border-border bg-card p-2 shadow-card-hover">
+          <div className="px-1 pb-1.5 text-[10px] text-muted-foreground">Ctrl+clique para marcar várias opções</div>
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onClick={(e) => e.stopPropagation()}
+            placeholder="Buscar..."
+            className="mb-1.5 h-8 flex-shrink-0 rounded-md border border-border px-2 text-xs"
+          />
+          <div className="max-h-[190px] select-none overflow-y-auto">
+            {filtered.length === 0 && (
+              <div className="p-1.5 text-center text-[11.5px] text-muted-foreground">Nenhuma opção encontrada.</div>
+            )}
+            {filtered.map((o) => {
+              const vs = String(o);
+              const selected = values.includes(vs);
+              return (
+                <div
+                  key={vs}
+                  onClick={(e) => toggle(vs, e.ctrlKey || e.metaKey)}
+                  className={`cursor-pointer truncate rounded-md px-2 py-1.5 text-xs ${
+                    selected ? "bg-ancora-blue font-semibold text-white" : "hover:bg-ancora-surface"
+                  }`}
+                >
+                  {formatter ? formatter(o) : o}
+                </div>
+              );
+            })}
+          </div>
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
+            className="mt-1.5 h-[30px] flex-shrink-0 rounded-[7px] bg-ancora-blue text-xs font-bold text-white hover:bg-ancora-blue-light"
+          >
+            Aplicar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -214,7 +293,15 @@ function PanelCard({
   );
 }
 
-function RankRows({ rows, total }: { rows: { nome: string; qtd: number }[]; total: number }) {
+/** Ranking por Cliente — agora com tooltip mostrando o detalhamento por Tipo de
+ * Chamado ao passar o mouse, igual ao showTip(nome, tipoRows) do dashboard HTML. */
+function RankRows({
+  rows,
+  total,
+}: {
+  rows: { nome: string; qtd: number; tipos: Record<string, number> }[];
+  total: number;
+}) {
   const max = rows.reduce((m, r) => Math.max(m, r.qtd), 0);
   return (
     <ScrollArea className="h-[380px]">
@@ -228,27 +315,65 @@ function RankRows({ rows, total }: { rows: { nome: string; qtd: number }[]; tota
           </TableRow>
         </TableHeader>
         <TableBody>
-          {rows.map((r) => (
-            <TableRow key={r.nome} className="border-border/60">
-              <TableCell className="max-w-0 truncate text-sm font-medium text-foreground">
-                <div className="truncate" title={r.nome}>
-                  {r.nome}
-                </div>
-                <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-ancora-blue"
-                    style={{ width: `${max ? Math.min(100, (r.qtd / max) * 100) : 0}%` }}
-                  />
-                </div>
-              </TableCell>
-              <TableCell className="text-right text-sm font-semibold tabular-nums text-foreground">
-                {fmt(r.qtd)}
-                <span className="ml-1 text-[10px] font-normal text-muted-foreground">
-                  {total ? fmtPct((r.qtd / total) * 100) : ""}
-                </span>
-              </TableCell>
-            </TableRow>
-          ))}
+          {rows.map((r) => {
+            const tipoRows = Object.entries(r.tipos).sort((a, b) => b[1] - a[1]);
+            const maxTipo = tipoRows.length ? tipoRows[0][1] : 1;
+            return (
+              <HoverCard key={r.nome} openDelay={80} closeDelay={80}>
+                <HoverCardTrigger asChild>
+                  <TableRow className="cursor-default border-border/60 hover:bg-accent/40">
+                    <TableCell className="max-w-0 truncate text-sm font-medium text-foreground">
+                      <div className="truncate" title={r.nome}>
+                        {r.nome}
+                      </div>
+                      <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-ancora-blue"
+                          style={{ width: `${max ? Math.min(100, (r.qtd / max) * 100) : 0}%` }}
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right text-sm font-semibold tabular-nums text-foreground">
+                      {fmt(r.qtd)}
+                      <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                        {total ? fmtPct((r.qtd / total) * 100) : ""}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                </HoverCardTrigger>
+                <HoverCardContent side="left" align="start" className="w-72 border border-border p-0 shadow-card-hover">
+                  <div className="rounded-t-md bg-ancora-blue px-3 py-2 text-white">
+                    <p className="truncate text-sm font-semibold" title={r.nome}>
+                      {r.nome}
+                    </p>
+                    <p className="text-[11px] text-white/80">{fmt(r.qtd)} chamados</p>
+                  </div>
+                  <ul className="divide-y divide-border p-2">
+                    {tipoRows.map(([tipo, q]) => {
+                      const p = maxTipo ? (q / maxTipo) * 100 : 0;
+                      return (
+                        <li key={tipo} className="flex items-center justify-between gap-3 py-1.5">
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-[12px] font-medium text-foreground">{tipo}</p>
+                            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-muted">
+                              <div
+                                className="h-full rounded-full bg-neutral-dark"
+                                style={{ width: `${Math.min(100, p)}%` }}
+                              />
+                            </div>
+                          </div>
+                          <span className="tabular-nums text-[12px] font-semibold text-foreground">{fmt(q)}</span>
+                        </li>
+                      );
+                    })}
+                    {tipoRows.length === 0 && (
+                      <li className="py-3 text-center text-[11.5px] text-muted-foreground">Sem tipos registrados.</li>
+                    )}
+                  </ul>
+                </HoverCardContent>
+              </HoverCard>
+            );
+          })}
           {rows.length === 0 && (
             <TableRow>
               <TableCell colSpan={2} className="py-10 text-center text-sm text-muted-foreground">
@@ -413,7 +538,8 @@ function DashboardView({
   const [semestre, setSemestre] = useState<"all" | "1" | "2">("all");
   const [quick, setQuick] = useState<QuickKey[]>([]);
 
-  const set = (k: keyof Filters) => (v: string) => setFilters((f) => ({ ...f, [k]: v }));
+  const setArr = (k: keyof Omit<Filters, "search">) => (v: string[]) =>
+    setFilters((f) => ({ ...f, [k]: v }));
   const toggleQuick = (k: QuickKey) => () =>
     setQuick((q) => (q.includes(k) ? q.filter((x) => x !== k) : [...q, k]));
 
@@ -448,10 +574,10 @@ function DashboardView({
 
   const { currentKpis, prevKpis, currentLabel, previousLabel } = useMemo(() => {
     const latest = ANOS[ANOS.length - 1];
-    const currentYear = filters.ano === "all" ? String(latest) : filters.ano;
+    const currentYear = filters.ano.length === 1 ? filters.ano[0] : String(latest);
     const idx = ANOS.indexOf(Number(currentYear));
     const prev = idx > 0 ? ANOS[idx - 1] : (ANOS[idx + 1] ?? ANOS[idx]);
-    const pick = (ano: string) => refine(applyFilters(ROWS, { ...filters, ano }), quick);
+    const pick = (ano: string) => refine(applyFilters(ROWS, { ...filters, ano: [ano] }), quick);
     return {
       currentKpis: computeKpis(pick(currentYear)),
       prevKpis: computeKpis(pick(String(prev))),
@@ -502,7 +628,7 @@ function DashboardView({
     };
   }, [filtered]);
 
-  const clientesRank = useMemo(() => groupCount(filtered, (r) => r.cliente, 20), [filtered]);
+  const clientesRank = useMemo(() => clienteRankComTipos(filtered, 20), [filtered]);
   const defExp = useMemo(
     () => deflatoresRank(filtered, DEFLATORES_EXPEDICAO, (r) => r.confExp, 20),
     [filtered],
@@ -613,7 +739,7 @@ function DashboardView({
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/70" />
               <Input
                 value={filters.search}
-                onChange={(e) => set("search")(e.target.value)}
+                onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
                 placeholder="Buscar por Nº chamado ou cliente…"
                 className="h-9 w-64 border-white/20 bg-white/10 pl-9 text-sm text-white placeholder:text-white/60 focus-visible:ring-white/40"
               />
@@ -674,30 +800,30 @@ function DashboardView({
               </Button>
             </div>
             <div className="space-y-3">
-              <FilterSelect label="Ano" value={filters.ano} onChange={set("ano")} options={opts.anos} />
-              <FilterSelect
+              <FilterMultiSelect label="Ano" values={filters.ano} onChange={setArr("ano")} options={opts.anos} />
+              <FilterMultiSelect
                 label="Mês"
-                value={filters.mes}
-                onChange={set("mes")}
+                values={filters.mes}
+                onChange={setArr("mes")}
                 options={opts.meses}
                 formatter={(v) => `${String(v).padStart(2, "0")} · ${MESES[Number(v) - 1] ?? ""}`}
               />
-              <FilterSelect label="Dia" value={filters.dia} onChange={set("dia")} options={opts.dias} />
-              <FilterSelect label="Cliente" value={filters.cliente} onChange={set("cliente")} options={opts.clientes} />
-              <FilterSelect label="CD" value={filters.cd} onChange={set("cd")} options={opts.cds} />
-              <FilterSelect label="Região" value={filters.regiao} onChange={set("regiao")} options={opts.regioes} />
-              <FilterSelect
+              <FilterMultiSelect label="Dia" values={filters.dia} onChange={setArr("dia")} options={opts.dias} />
+              <FilterMultiSelect label="Cliente" values={filters.cliente} onChange={setArr("cliente")} options={opts.clientes} />
+              <FilterMultiSelect label="CD" values={filters.cd} onChange={setArr("cd")} options={opts.cds} />
+              <FilterMultiSelect label="Região" values={filters.regiao} onChange={setArr("regiao")} options={opts.regioes} />
+              <FilterMultiSelect
                 label="Conferente da Expedição"
-                value={filters.conferente}
-                onChange={set("conferente")}
+                values={filters.conferente}
+                onChange={setArr("conferente")}
                 options={opts.conferentes}
               />
-              <FilterSelect label="Tipo de Chamado" value={filters.tipo} onChange={set("tipo")} options={opts.tipos} />
-              <FilterSelect label="Status" value={filters.status} onChange={set("status")} options={opts.statuses} />
-              <FilterSelect
+              <FilterMultiSelect label="Tipo de Chamado" values={filters.tipo} onChange={setArr("tipo")} options={opts.tipos} />
+              <FilterMultiSelect label="Status" values={filters.status} onChange={setArr("status")} options={opts.statuses} />
+              <FilterMultiSelect
                 label="Procedência"
-                value={filters.parecer}
-                onChange={set("parecer")}
+                values={filters.parecer}
+                onChange={setArr("parecer")}
                 options={opts.pareceres}
               />
             </div>
@@ -789,7 +915,7 @@ function DashboardView({
             <DeflatoresPanel title="Deflatores · Checkout" rows={defCheck} causas={DEFLATORES_CHECKOUT} />
           </section>
 
-                    <div className="flex flex-col items-center gap-1 pb-6 pt-2 text-center">
+          <div className="flex flex-col items-center gap-1 pb-6 pt-2 text-center">
             <p className="text-xs text-muted-foreground">
               Fonte: base &quot;BI Help Desk - Claud&quot; · {fmt(filtered.length)} chamados na base filtrada
               {semestre === "1" ? " · 1º Semestre" : semestre === "2" ? " · 2º Semestre" : ""} (tipo

@@ -120,31 +120,41 @@ export function cdSigla(cd: string): string {
   return m ? m[1] : cd.slice(0, 2).toUpperCase();
 }
 
+/**
+ * Filtros multi-seleção — cada campo é uma lista de valores selecionados
+ * (array vazio = "Todos"). Reproduz exatamente o comportamento do dashboard HTML,
+ * incluindo os 12 filtros: ano, mes, dia, cliente, cd, regiao, confExp, confCheck,
+ * tipo, modalidade, status, procedencia (mapeado para o campo `sub`).
+ */
 export type Filters = {
-  ano: string;
-  mes: string;
-  dia: string;
-  cliente: string;
-  cd: string;
-  regiao: string;
-  conferente: string;
-  tipo: string;
-  status: string;
-  parecer: string;
+  ano: number[];
+  mes: number[];
+  dia: number[];
+  cliente: string[];
+  cd: string[];
+  regiao: string[];
+  confExp: string[];
+  confCheck: string[];
+  tipo: string[];
+  modalidade: string[];
+  status: string[];
+  procedencia: string[];
   search: string;
 };
 
 export const emptyFilters: Filters = {
-  ano: "all",
-  mes: "all",
-  dia: "all",
-  cliente: "all",
-  cd: "all",
-  regiao: "all",
-  conferente: "all",
-  tipo: "all",
-  status: "all",
-  parecer: "all",
+  ano: [],
+  mes: [],
+  dia: [],
+  cliente: [],
+  cd: [],
+  regiao: [],
+  confExp: [],
+  confCheck: [],
+  tipo: [],
+  modalidade: [],
+  status: [],
+  procedencia: [],
   search: "",
 };
 
@@ -152,24 +162,34 @@ export const MESES = [
   "Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez",
 ];
 
-export function applyFilters(rows: Chamado[], f: Filters): Chamado[] {
+type FilterFieldKey = Exclude<keyof Filters, "search">;
+const FIELD_MAP: Record<FilterFieldKey, keyof Chamado> = {
+  ano: "ano",
+  mes: "mes",
+  dia: "dia",
+  cliente: "cliente",
+  cd: "cd",
+  regiao: "regiao",
+  confExp: "confExp",
+  confCheck: "confCheck",
+  tipo: "tipo",
+  modalidade: "modalidade",
+  status: "status",
+  procedencia: "sub",
+};
+
+/** Aplica os filtros, opcionalmente ignorando uma chave (usado para calcular as
+ * opções disponíveis de cada combobox com base nos demais filtros já ativos). */
+export function applyFilters(rows: Chamado[], f: Filters, excludeKey?: FilterFieldKey): Chamado[] {
   const s = f.search.trim().toLowerCase();
   return rows.filter((r) => {
-    if (f.ano !== "all" && String(r.ano) !== f.ano) return false;
-    if (f.mes !== "all" && String(r.mes) !== f.mes) return false;
-    if (f.dia !== "all" && String(r.dia) !== f.dia) return false;
-    if (f.cliente !== "all" && r.cliente !== f.cliente) return false;
-    if (f.cd !== "all" && r.cd !== f.cd) return false;
-    if (f.regiao !== "all" && r.regiao !== f.regiao) return false;
-
-    if (f.conferente !== "all" && r.conferente !== f.conferente) return false;
-    if (f.tipo !== "all" && r.tipo !== f.tipo) return false;
-    if (f.status !== "all" && r.status !== f.status) return false;
-    if (f.parecer !== "all" && r.parecer !== f.parecer) return false;
+    for (const key of Object.keys(FIELD_MAP) as FilterFieldKey[]) {
+      if (key === excludeKey) continue;
+      const sel = f[key] as (string | number)[];
+      if (sel.length && !sel.map(String).includes(String(r[FIELD_MAP[key]]))) return false;
+    }
     if (s) {
-      const hit =
-        String(r.idPortal).includes(s) ||
-        r.cliente.toLowerCase().includes(s);
+      const hit = String(r.idPortal).includes(s) || r.cliente.toLowerCase().includes(s);
       if (!hit) return false;
     }
     return true;
@@ -233,6 +253,34 @@ export function groupCount<T>(rows: T[], key: (r: T) => string, limit = 15) {
   }
   return Array.from(map.entries())
     .map(([nome, qtd]) => ({ nome, qtd }))
+    .sort((a, b) => b.qtd - a.qtd)
+    .slice(0, limit);
+}
+
+/** Ranking por cliente incluindo o detalhamento por tipo de chamado
+ * (usado no tooltip ao passar o mouse, igual ao dashboard HTML). */
+export type ClienteRank = { nome: string; qtd: number; tipos: { nome: string; qtd: number }[] };
+
+export function clienteRank(rows: Chamado[], limit = 20): ClienteRank[] {
+  const map = new Map<string, { qtd: number; tipos: Map<string, number> }>();
+  for (const r of rows) {
+    if (!r.cliente || r.cliente === "-") continue;
+    let e = map.get(r.cliente);
+    if (!e) {
+      e = { qtd: 0, tipos: new Map() };
+      map.set(r.cliente, e);
+    }
+    e.qtd++;
+    e.tipos.set(r.tipo, (e.tipos.get(r.tipo) ?? 0) + 1);
+  }
+  return Array.from(map.entries())
+    .map(([nome, e]) => ({
+      nome,
+      qtd: e.qtd,
+      tipos: Array.from(e.tipos.entries())
+        .map(([nome, qtd]) => ({ nome, qtd }))
+        .sort((a, b) => b.qtd - a.qtd),
+    }))
     .sort((a, b) => b.qtd - a.qtd)
     .slice(0, limit);
 }

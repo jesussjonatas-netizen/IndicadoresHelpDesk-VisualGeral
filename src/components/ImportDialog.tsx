@@ -16,12 +16,18 @@ import { fmt } from "@/lib/chamados";
 
 const SENHA = "chamadosbr";
 
+type DiffState = ImportDiff & {
+  descartados: number;
+  descartadosSemId: number;
+  descartadosStatus: number;
+};
+
 export default function ImportDialog({ onDone }: { onDone: () => void }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
-  const [diff, setDiff] = useState<ImportDiff | null>(null);
+  const [diff, setDiff] = useState<DiffState | null>(null);
   const [senha, setSenha] = useState("");
   const [ok, setOk] = useState<string | null>(null);
 
@@ -38,12 +44,24 @@ export default function ImportDialog({ onDone }: { onDone: () => void }) {
     reset();
     setOpen(true);
     try {
-      setBusy("Lendo planilha…");
+      setBusy("Lendo e normalizando a planilha…");
       const parsed = await parseImportFile(file);
-      if (!parsed.length) throw new Error("Nenhuma linha válida encontrada na planilha.");
+      if (!parsed.rows.length) {
+        throw new Error(
+          `Nenhuma linha válida encontrada na planilha (${fmt(parsed.descartados)} linha(s) descartada(s): ${fmt(
+            parsed.descartadosSemId,
+          )} sem Id Portal, ${fmt(parsed.descartadosStatus)} com tipo/status irrelevante).`,
+        );
+      }
       setBusy("Comparando com a base…");
       const existing = await fetchChamadosRaw();
-      setDiff(diffImport(parsed, existing));
+      const d = diffImport(parsed.rows, existing);
+      setDiff({
+        ...d,
+        descartados: parsed.descartados,
+        descartadosSemId: parsed.descartadosSemId,
+        descartadosStatus: parsed.descartadosStatus,
+      });
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -129,11 +147,12 @@ export default function ImportDialog({ onDone }: { onDone: () => void }) {
 
           {diff && !busy && (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
                   { label: "Novos", value: diff.novos.length, color: "#0E8F5C" },
                   { label: "Atualizados", value: diff.atualizados.length, color: "#E98A15" },
                   { label: "Sem alteração", value: diff.iguais, color: "#6B7280" },
+                  { label: "Descartados", value: diff.descartados, color: "#B91C1C" },
                 ].map((c) => (
                   <div key={c.label} className="rounded-xl border border-border bg-card p-3 text-center">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -145,6 +164,14 @@ export default function ImportDialog({ onDone }: { onDone: () => void }) {
                   </div>
                 ))}
               </div>
+
+              {diff.descartados > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Descartados: {fmt(diff.descartadosSemId)} sem Id Portal e{" "}
+                  {fmt(diff.descartadosStatus)} com tipo "Devolução" ou status "Cancelado por
+                  tempo"/"Em Preparação".
+                </p>
+              )}
 
               <div className="space-y-1.5">
                 <label className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">

@@ -719,7 +719,7 @@ function DashboardView({
 
   return (
     <div className="min-h-screen bg-ancora-surface">
-      <header className="sticky top-0 z-30 bg-ancora-blue text-white shadow-md print:static">
+      <header className="sticky top-0 z-30 border-b-[3px] border-ancora-green bg-ancora-blue text-white shadow-md print:static">
         <div className="flex flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex h-11 items-center justify-center rounded-lg bg-white px-3 shadow-sm">

@@ -139,7 +139,7 @@ export default function ImportDialog({ onDone }: { onDone: () => void }) {
           )}
 
           {ok && (
-            <div className="flex items-start gap-2 rounded-lg border p-3 text-sm" style={{ borderColor: "#0E8F5C40", color: "#0E8F5C" }}>
+            <div className="flex items-start gap-2 rounded-lg border p-3 text-sm" style={{ borderColor: "#3DAE2B40", color: "#3DAE2B" }}>
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
               <span>{ok}</span>
             </div>
@@ -149,10 +149,10 @@ export default function ImportDialog({ onDone }: { onDone: () => void }) {
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {[
-                  { label: "Novos", value: diff.novos.length, color: "#0E8F5C" },
+                  { label: "Novos", value: diff.novos.length, color: "#3DAE2B" },
                   { label: "Atualizados", value: diff.atualizados.length, color: "#E98A15" },
-                  { label: "Sem alteração", value: diff.iguais, color: "#6B7280" },
-                  { label: "Descartados", value: diff.descartados, color: "#B91C1C" },
+                  { label: "Sem alteração", value: diff.iguais, color: "#4B4F54" },
+                  { label: "Descartados", value: diff.descartados, color: "#CE0E2D" },
                 ].map((c) => (
                   <div key={c.label} className="rounded-xl border border-border bg-card p-3 text-center">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

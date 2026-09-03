@@ -719,12 +719,10 @@ function DashboardView({
 
   return (
     <div className="min-h-screen bg-ancora-surface">
-      <header className="sticky top-0 z-30 border-b-[3px] border-ancora-green bg-ancora-blue text-white shadow-md print:static">
+      <header className="sticky top-0 z-30 border-b-[6px] border-ancora-green bg-ancora-blue text-white shadow-md print:static">
         <div className="flex flex-wrap items-center gap-4 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 items-center justify-center rounded-lg bg-white px-3 shadow-sm">
-              <img src={logoAncora} alt="Rede Ancora" width={1536} height={512} className="h-7 w-auto" />
-            </div>
+            <img src={logoAncora} alt="Rede Ancora" width={1536} height={512} className="h-9 w-auto" />
             <div>
               <h1 className="text-base font-semibold leading-tight sm:text-lg">
                 Análise Comparativa dos Chamados de Help Desk

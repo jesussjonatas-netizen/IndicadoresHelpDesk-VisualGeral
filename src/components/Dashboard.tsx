@@ -46,8 +46,8 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 const AMBER = "#E98A15";
-const GREEN = "#0E8F5C";
-const GRAY = "#6B7280";
+const GREEN = "#3DAE2B";
+const GRAY = "#4B4F54";
 
 const fmtMoney = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -665,7 +665,7 @@ function DashboardView({
 
   const exportPdf = () => {
     const doc = new jsPDF({ orientation: "landscape", unit: "pt", format: "a4" });
-    doc.setFillColor(0, 43, 92);
+    doc.setFillColor(0, 58, 93);
     doc.rect(0, 0, doc.internal.pageSize.getWidth(), 60, "F");
     doc.setTextColor(255);
     doc.setFontSize(14);
@@ -688,7 +688,7 @@ function DashboardView({
         ["Valor total", fmtMoney(totals.valorTotal)],
       ],
       theme: "grid",
-      headStyles: { fillColor: [0, 43, 92] },
+      headStyles: { fillColor: [0, 58, 93] },
       styles: { fontSize: 9 },
       margin: { left: 30, right: 30 },
       tableWidth: 300,
@@ -698,7 +698,7 @@ function DashboardView({
       head: [["Cliente", "Qtd."]],
       body: clientesRank.slice(0, 15).map((r) => [r.nome, fmt(r.qtd)]),
       theme: "grid",
-      headStyles: { fillColor: [0, 43, 92] },
+      headStyles: { fillColor: [0, 58, 93] },
       styles: { fontSize: 8 },
       margin: { left: 350, right: 30 },
       tableWidth: 460,
@@ -921,7 +921,7 @@ function DashboardView({
               {semestre === "1" ? " · 1º Semestre" : semestre === "2" ? " · 2º Semestre" : ""} (tipo
               &quot;Devolução&quot; e status &quot;Cancelado por tempo&quot;/&quot;Em Preparação&quot; desconsiderados)
             </p>
-            <p className="text-[11px] text-muted-foreground/85">
+            <p className="text-[11px] text-ancora-gray-light">
               As informações são extraídas do B2B — podem existir pequenas diferenças nos valores em função de
               tributações.
             </p>

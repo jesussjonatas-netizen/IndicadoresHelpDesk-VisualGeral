@@ -39,6 +39,7 @@
   --color-ancora-amber: var(--ancora-amber);
   --color-ancora-green: var(--ancora-green);
   --color-ancora-gray: var(--ancora-gray);
+  --color-ancora-gray-light: var(--ancora-gray-light);
   --shadow-card: 0 1px 3px 0 rgb(15 23 42 / 0.06), 0 1px 2px -1px rgb(15 23 42 / 0.04);
   --shadow-card-hover: 0 4px 12px -2px rgb(15 23 42 / 0.12), 0 2px 4px -2px rgb(15 23 42 / 0.08);
 }
@@ -46,14 +47,15 @@
 :root {
   --radius: 0.8125rem;
 
-  --ancora-blue: #002B5C;
-  --ancora-blue-dark: #001A3D;
-  --ancora-blue-light: #0A4A8F;
-  --ancora-red: #E30613;
-  --ancora-red-dark: #B10510;
-  --ancora-gray: #6B7280;
+  --ancora-blue: #003A5D;
+  --ancora-blue-dark: #00293F;
+  --ancora-blue-light: #0A5990;
+  --ancora-red: #CE0E2D;
+  --ancora-red-dark: #9C0D2A;
+  --ancora-gray: #4B4F54;
+  --ancora-gray-light: #9AA2A5;
   --ancora-amber: #E98A15;
-  --ancora-green: #0E8F5C;
+  --ancora-green: #3DAE2B;
   --ancora-surface: #F5F7FA;
 
   --background: #F5F7FA;
@@ -67,7 +69,7 @@
   --secondary: oklch(0.96 0.01 250);
   --secondary-foreground: oklch(0.25 0.03 260);
   --muted: oklch(0.96 0.008 250);
-  --muted-foreground: oklch(0.50 0.02 260);
+  --muted-foreground: #4B4F54;
   --accent: oklch(0.94 0.02 258);
   --accent-foreground: var(--ancora-blue-dark);
   --destructive: var(--ancora-red);

@@ -9,7 +9,7 @@ const norm = (s: string) =>
     .trim()
     .toLowerCase();
 
-/** Mapa Razão Social completa -> sigla curta do CD (idêntico ao dashboard HTML). */
+/** Mapa Razao Social completa -> sigla curta do CD (identico ao dashboard HTML). */
 const CD_MAP: Record<string, string> = {
   "rede ancora - go importadora, exportadora e distribuidora de auto pecas s.a": "GO",
   "rede ancora - es importadora, exportadora e distribuidora de auto pecas s.a": "ES",
@@ -39,7 +39,7 @@ function cdShort(nameRaw: string): string {
   return name.slice(0, 6);
 }
 
-/** Mapas de classificação Status -> Ação / Parecer (idênticos ao dashboard HTML). */
+/** Mapas de classificacao Status -> Acao / Parecer (identicos ao dashboard HTML). */
 const STATUS_ACAO: Record<string, string> = {
   "improcedente": "FINALIZADO", "resolvido": "FINALIZADO", "produtos recebidos": "ANCORA",
   "aguardando analise da nota fiscal": "ANCORA", "em analise": "ANCORA",
@@ -77,7 +77,7 @@ const STATUS_PARECER: Record<string, string> = {
   "recusa no sefaz realizada - validando": "Procedente",
 };
 
-/** Reproduz exatamente a função classificar(status) do dashboard HTML. */
+/** Reproduz exatamente a funcao classificar(status) do dashboard HTML. */
 function classificar(statusRaw: string): { grupo: string; subcategoria: string } {
   const key = norm(statusRaw);
   const acao = STATUS_ACAO[key] ?? "ANCORA";
@@ -145,8 +145,8 @@ function parseDate(v: unknown): { ano: number | null; mes: number | null; dia: n
   return { ano: null, mes: null, dia: null };
 }
 
-/** Regras de exclusão da base (idênticas ao dashboard HTML): Tipo "Devolução" (exceto
- * "Devolução para HD(Movidesk)") e Status "Cancelado por tempo" / "Em Preparação". */
+/** Regras de exclusao da base (identicas ao dashboard HTML): Tipo "Devolucao" (exceto
+ * "Devolucao para HD(Movidesk)") e Status "Cancelado por tempo" / "Em Preparacao". */
 export function isExcluded(tipo: string, statusRaw: string): boolean {
   const t = norm(tipo);
   const s = norm(statusRaw);
@@ -155,20 +155,40 @@ export function isExcluded(tipo: string, statusRaw: string): boolean {
   return false;
 }
 
-export async function parseImportFile(file: File): Promise<UpsertRow[]> {
+/** Resultado da leitura/normalizacao do arquivo: linhas validas + contagem do que foi
+ * descartado (sem "Id Portal" ou com tipo/status irrelevante para a base). */
+export type ParsedImport = {
+  rows: UpsertRow[];
+  /** Total de linhas descartadas (soma dos dois motivos abaixo). */
+  descartados: number;
+  /** Descartadas por nao terem "Id Portal" valido. */
+  descartadosSemId: number;
+  /** Descartadas por tipo "Devolucao" ou status "Cancelado por tempo"/"Em Preparacao". */
+  descartadosStatus: number;
+};
+
+export async function parseImportFile(file: File): Promise<ParsedImport> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { cellDates: true });
   const ws = wb.Sheets[wb.SheetNames[0]];
   const raw = XLSX.utils.sheet_to_json<Row>(ws, { defval: "" });
 
   const out: UpsertRow[] = [];
+  let descartadosSemId = 0;
+  let descartadosStatus = 0;
   for (const row of raw) {
     const id = num(pick(row, FIELD_ALIASES.id_portal));
-    if (!id) continue;
+    if (!id) {
+      descartadosSemId++;
+      continue;
+    }
 
     const tipo = txt(pick(row, FIELD_ALIASES.tipo));
     const statusRaw = txt(pick(row, FIELD_ALIASES.status));
-    if (isExcluded(tipo, statusRaw)) continue;
+    if (isExcluded(tipo, statusRaw)) {
+      descartadosStatus++;
+      continue;
+    }
 
     let ano = num(pick(row, FIELD_ALIASES.ano));
     let mes = num(pick(row, FIELD_ALIASES.mes));
@@ -200,7 +220,12 @@ export async function parseImportFile(file: File): Promise<UpsertRow[]> {
       modalidade: txt(pick(row, FIELD_ALIASES.modalidade)) || "N/D",
     });
   }
-  return out;
+  return {
+    rows: out,
+    descartados: descartadosSemId + descartadosStatus,
+    descartadosSemId,
+    descartadosStatus,
+  };
 }
 
 const COMPARE_FIELDS: (keyof UpsertRow)[] = [

@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Centralize typography in `src/index.css` and expose font families through Tailwind theme tokens so DOM-based exports inherit the dashboard fonts.

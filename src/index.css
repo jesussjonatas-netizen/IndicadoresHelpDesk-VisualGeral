@@ -1,0 +1,49 @@
+@import "@fontsource/roboto-condensed/400.css";
+@import "@fontsource/roboto-condensed/500.css";
+@import "@fontsource/roboto-condensed/600.css";
+@import "@fontsource/roboto-condensed/700.css";
+
+@font-face {
+  font-family: "Arial Narrow";
+  src: local("Arial Narrow"), url("/fonts/ArialNarrow-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Arial Narrow";
+  src: local("Arial Narrow Bold"), url("/fonts/ArialNarrow-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}
+
+@theme inline {
+  --font-sans: "Roboto Condensed", sans-serif;
+  --font-heading: "Arial Narrow", sans-serif;
+}
+
+@layer base {
+  html,
+  body {
+    font-family: var(--font-sans);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+  }
+
+  button,
+  input,
+  select,
+  textarea,
+  table {
+    font-family: inherit;
+  }
+}
